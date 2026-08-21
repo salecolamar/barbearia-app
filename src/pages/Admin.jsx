@@ -326,8 +326,20 @@ function AgendaTab() {
                   <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>
                     {a.barbeiroNome} · {a.clienteTelefone}
                   </div>
+                  {a.servicos?.length > 0 && (
+                    <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>
+                      {a.servicos.map((s) => s.nome).join(', ')}
+                    </div>
+                  )}
                 </div>
-                <StatusBadge status={a.status} />
+                <div style={{ textAlign: 'right' }}>
+                  <StatusBadge status={a.status} />
+                  {a.valorTotal > 0 && (
+                    <div style={{ marginTop: 6, fontWeight: 700, color: 'var(--gold)', fontSize: 14 }}>
+                      R$ {a.valorTotal.toFixed(2).replace('.', ',')}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {a.status === 'confirmado' && (

@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
-import { Bell, Check, ChevronLeft, Clock, User } from 'lucide-react';
+import { Bell, Check, ChevronLeft, Clock, Scissors, User } from 'lucide-react';
 import { db } from '../firebase';
 import { pedirTokenNotificacao } from '../notifications';
 import { getClienteSalvo, salvarCliente } from '../utils/storage';
-import { dateToStr, escolherBarbeiroDisponivel, getHorariosDisponiveisGeral, proximosDias } from '../utils/slots';
+import { dateToStr, escolherBarbeiroDisponivel, getHorariosDisponiveisGeral, proximosDias, strToDate } from '../utils/slots';
+import { calcularMelhorPreco } from '../utils/combos';
 import DayStrip from '../components/DayStrip';
 import TimeSlotGrid from '../components/TimeSlotGrid';
+import ServiceSelect from '../components/ServiceSelect';
 
 export default function Booking() {
   const clienteSalvo = getClienteSalvo();
@@ -15,6 +17,8 @@ export default function Booking() {
   const [erroCarregamento, setErroCarregamento] = useState(false);
   const [barbeiros, setBarbeiros] = useState([]);
   const [config, setConfig] = useState(null);
+  const [servicos, setServicos] = useState([]);
+  const [servicosSelecionadosIds, setServicosSelecionadosIds] = useState([]);
 
   const [nome, setNome] = useState(clienteSalvo?.nome || '');
   const [telefone, setTelefone] = useState(clienteSalvo?.telefone || '');
@@ -35,11 +39,13 @@ export default function Booking() {
   useEffect(() => {
     async function carregar() {
       try {
-        const [barbeirosSnap, configSnap] = await Promise.all([
+        const [barbeirosSnap, servicosSnap, configSnap] = await Promise.all([
           getDocs(collection(db, 'barbeiros')),
+          getDocs(collection(db, 'servicos')),
           getDoc(doc(db, 'config', 'geral')),
         ]);
         setBarbeiros(barbeirosSnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((b) => b.ativo !== false));
+        setServicos(servicosSnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((s) => s.ativo !== false));
         setConfig(configSnap.exists() ? configSnap.data() : null);
       } catch (err) {
         console.error('Falha ao carregar dados da barbearia:', err);
@@ -100,17 +106,36 @@ export default function Booking() {
     setErro('');
     setBarbeiroEscolhido(barbeiro);
     setHora(h);
-    setPasso('revisao');
+    setPasso('servicos');
+  }
+
+  function alternarServico(servico) {
+    setServicosSelecionadosIds((prev) =>
+      prev.includes(servico.id) ? prev.filter((id) => id !== servico.id) : [...prev, servico.id]
+    );
+  }
+
+  function calcularResumoServicos() {
+    const escolhidos = servicos.filter((s) => servicosSelecionadosIds.includes(s.id));
+    if (escolhidos.length === 0) return { total: 0, itens: [] };
+    return calcularMelhorPreco(
+      escolhidos.map((s) => ({ chave: s.chave || s.id, nome: s.nome, preco: s.preco })),
+      strToDate(dataStr).getDay()
+    );
   }
 
   async function confirmarAgendamento() {
     setSalvando(true);
     setErro('');
     try {
+      const resumoServicos = calcularResumoServicos();
       const docRef = await addDoc(collection(db, 'agendamentos'), {
         barbeiroId: barbeiroEscolhido.id,
         barbeiroNome: barbeiroEscolhido.nome,
         servicoDuracao: config.intervaloMin || 30,
+        servicos: servicos.filter((s) => servicosSelecionadosIds.includes(s.id)).map((s) => ({ id: s.id, nome: s.nome })),
+        valorItens: resumoServicos.itens,
+        valorTotal: resumoServicos.total,
         data: dataStr,
         hora,
         clienteNome: nome.trim(),
@@ -149,6 +174,7 @@ export default function Booking() {
     setDataStr(dateToStr(new Date()));
     setHora(null);
     setBarbeiroEscolhido(null);
+    setServicosSelecionadosIds([]);
     setAgendamentoId(null);
     setLembreteAtivo(false);
     setPasso('horario');
@@ -178,8 +204,13 @@ export default function Booking() {
 
   return (
     <div>
-      {passo === 'revisao' && (
+      {passo === 'servicos' && (
         <button type="button" onClick={() => setPasso('horario')} style={backBtnStyle}>
+          <ChevronLeft size={18} /> Voltar
+        </button>
+      )}
+      {passo === 'revisao' && (
+        <button type="button" onClick={() => setPasso('servicos')} style={backBtnStyle}>
           <ChevronLeft size={18} /> Voltar
         </button>
       )}
@@ -214,10 +245,39 @@ export default function Booking() {
         </Etapa>
       )}
 
+      {passo === 'servicos' && (
+        <Etapa titulo="Escolha o serviço" icone={<Scissors size={18} />}>
+          {servicos.length === 0 ? (
+            <p style={{ color: 'var(--text-dim)' }}>
+              A barbearia ainda não cadastrou os serviços. Peça para o administrador acessar o painel em{' '}
+              <strong>/admin</strong>.
+            </p>
+          ) : (
+            <>
+              <ServiceSelect
+                servicos={servicos}
+                selecionados={servicosSelecionadosIds}
+                onToggle={alternarServico}
+                diaSemana={strToDate(dataStr).getDay()}
+              />
+              <button
+                type="button"
+                className="btn btn-primary btn-block"
+                style={{ marginTop: 4 }}
+                disabled={servicosSelecionadosIds.length === 0}
+                onClick={() => setPasso('revisao')}
+              >
+                Continuar
+              </button>
+            </>
+          )}
+        </Etapa>
+      )}
+
       {passo === 'revisao' && (
         <Etapa titulo="Confirmar agendamento" icone={<Check size={18} />}>
           <div className="card">
-            <Resumo nome={nome} dataStr={dataStr} hora={hora} />
+            <Resumo nome={nome} dataStr={dataStr} hora={hora} resumoServicos={calcularResumoServicos()} />
           </div>
           {erro && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{erro}</p>}
           <button type="button" className="btn btn-primary btn-block" onClick={confirmarAgendamento} disabled={salvando}>
@@ -246,7 +306,7 @@ export default function Booking() {
           <p style={{ color: 'var(--text-dim)', marginTop: 6 }}>Te esperamos na barbearia.</p>
 
           <div className="card" style={{ marginTop: 20, textAlign: 'left' }}>
-            <Resumo nome={nome} dataStr={dataStr} hora={hora} />
+            <Resumo nome={nome} dataStr={dataStr} hora={hora} resumoServicos={calcularResumoServicos()} />
           </div>
 
           {!lembreteAtivo ? (
@@ -286,13 +346,27 @@ function Etapa({ titulo, icone, children }) {
   );
 }
 
-function Resumo({ nome, dataStr, hora }) {
+function Resumo({ nome, dataStr, hora, resumoServicos }) {
   const d = dataStr ? new Date(`${dataStr}T00:00:00`) : null;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 14 }}>
       <Linha label="Nome" valor={nome} />
       <Linha label="Data" valor={d ? d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' }) : ''} />
       <Linha label="Horário" valor={hora} />
+      {resumoServicos && resumoServicos.itens.length > 0 && (
+        <>
+          <div style={{ borderTop: '1px solid var(--border)', margin: '4px 0' }} />
+          {resumoServicos.itens.map((item, i) => (
+            <Linha key={i} label={item.nome} valor={`R$ ${item.preco.toFixed(2).replace('.', ',')}`} />
+          ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
+            <span style={{ fontWeight: 700 }}>Total</span>
+            <span style={{ fontWeight: 700, color: 'var(--gold)' }}>
+              R$ {resumoServicos.total.toFixed(2).replace('.', ',')}
+            </span>
+          </div>
+        </>
+      )}
     </div>
   );
 }
