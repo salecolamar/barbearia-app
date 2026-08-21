@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { Calendar, Clock, MapPin, Phone } from 'lucide-react';
+import { AtSign, Calendar, Clock, MapPin, Phone } from 'lucide-react';
 import { db } from '../firebase';
 import { formatarHorarios } from '../utils/slots';
 import logo from '../assets/logo.jpg';
@@ -88,6 +88,12 @@ export default function Home({ irParaAgendar }) {
       {config.whatsapp && (
         <a href={whatsappUrl} target="_blank" rel="noreferrer" className="btn btn-secondary btn-block">
           <Phone size={16} /> Falar no WhatsApp
+        </a>
+      )}
+
+      {config.instagram && (
+        <a href={config.instagram} target="_blank" rel="noreferrer" className="btn btn-secondary btn-block">
+          <AtSign size={16} /> Seguir no Instagram
         </a>
       )}
 

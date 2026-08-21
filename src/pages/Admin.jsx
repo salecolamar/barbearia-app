@@ -729,13 +729,20 @@ function PerfilTab({ config, setConfig }) {
   const [descricao, setDescricao] = useState(config.descricao || '');
   const [endereco, setEndereco] = useState(config.endereco || '');
   const [whatsapp, setWhatsapp] = useState(config.whatsapp || '');
+  const [instagram, setInstagram] = useState(config.instagram || '');
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
 
   async function salvar(e) {
     e.preventDefault();
     setSalvando(true);
-    const dados = { nomeBarbearia: nome.trim() || 'Minha Barbearia', descricao: descricao.trim(), endereco: endereco.trim(), whatsapp: whatsapp.trim() };
+    const dados = {
+      nomeBarbearia: nome.trim() || 'Minha Barbearia',
+      descricao: descricao.trim(),
+      endereco: endereco.trim(),
+      whatsapp: whatsapp.trim(),
+      instagram: instagram.trim(),
+    };
     await updateDoc(doc(db, 'config', 'geral'), dados);
     setConfig((prev) => ({ ...prev, ...dados }));
     setSalvando(false);
@@ -775,6 +782,13 @@ function PerfilTab({ config, setConfig }) {
           onChange={(e) => { setWhatsapp(e.target.value); setSalvo(false); }}
           placeholder="Ex: 5511999999999 (com DDI e DDD)"
           inputMode="tel"
+        />
+
+        <label style={labelStyle}>Instagram (opcional)</label>
+        <input
+          value={instagram}
+          onChange={(e) => { setInstagram(e.target.value); setSalvo(false); }}
+          placeholder="Ex: https://www.instagram.com/seuusuario"
         />
 
         <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: 6 }} disabled={salvando}>
