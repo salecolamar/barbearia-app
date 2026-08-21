@@ -14,7 +14,7 @@ const firebaseConfig = {
 
 // Chave pública (VAPID) do Cloud Messaging, usada para lembretes por notificação.
 // Firebase Console → Configurações do projeto → Cloud Messaging → Certificados push da Web.
-export const VAPID_KEY = 'sua-vapid-key-aqui';
+export const VAPID_KEY = 'BGfLpEgtHZKsYPkA2hjo-JOO2JeBkxV43pV4S7KCE-Y0X_ic3P9grZOQJR4RtPo9qg9d1x7U48uUIhcQe4rHjps';
 
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
