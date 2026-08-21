@@ -4,12 +4,12 @@ import { getAuth, signInAnonymously } from 'firebase/auth';
 
 // Substitua pelos valores reais do seu projeto Firebase (veja o GUIA.md).
 const firebaseConfig = {
-  apiKey: 'sua-api-key-aqui',
-  authDomain: 'seu-projeto.firebaseapp.com',
-  projectId: 'seu-projeto',
-  storageBucket: 'seu-projeto.appspot.com',
-  messagingSenderId: '000000000000',
-  appId: '1:000000000000:web:xxxxxxxxxxxxxxxxxxxxxx',
+  apiKey: 'AIzaSyC7Jvao7L3b1zpXnve9NPfbOB0zS2Ju08I',
+  authDomain: 'barbearia-1778e.firebaseapp.com',
+  projectId: 'barbearia-1778e',
+  storageBucket: 'barbearia-1778e.firebasestorage.app',
+  messagingSenderId: '992952424450',
+  appId: '1:992952424450:web:6d2cf757b3c15cb595af1b',
 };
 
 // Chave pública (VAPID) do Cloud Messaging, usada para lembretes por notificação.
