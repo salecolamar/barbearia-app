@@ -51,26 +51,31 @@ export function gerarSlotsDoDia(horariosConfig, dateStr, intervaloMin) {
   return slots;
 }
 
-// Filtra os horários livres para um barbeiro/serviço em um dia, considerando
-// os agendamentos já existentes e (se for hoje) o horário atual.
-export function getHorariosDisponiveis({
+function barbeiroLivre(barbeiroId, inicioSlot, fimSlot, agendamentosDoDia) {
+  const ocupados = agendamentosDoDia.filter((a) => a.barbeiroId === barbeiroId && a.status !== 'cancelado');
+  return !ocupados.some((a) => {
+    const inicioA = timeToMinutes(a.hora);
+    const fimA = inicioA + (a.servicoDuracao || 30);
+    return inicioSlot < fimA && inicioA < fimSlot;
+  });
+}
+
+// Horários livres considerando todos os barbeiros ativos: um horário aparece
+// como disponível se pelo menos um barbeiro estiver livre nele.
+export function getHorariosDisponiveisGeral({
   dateStr,
   duracaoMin,
   horariosConfig,
   intervaloMin,
-  barbeiroId,
+  barbeiros,
   agendamentosDoDia,
   bufferMin = 20,
 }) {
   const config = horariosConfig[strToDate(dateStr).getDay()];
-  if (!config || !config.aberto) return [];
+  if (!config || !config.aberto || barbeiros.length === 0) return [];
 
   const fechamento = timeToMinutes(config.fim);
   const todos = gerarSlotsDoDia(horariosConfig, dateStr, intervaloMin);
-
-  const ocupados = agendamentosDoDia.filter(
-    (a) => a.barbeiroId === barbeiroId && a.status !== 'cancelado'
-  );
 
   const agora = new Date();
   const isHoje = dateStr === dateToStr(agora);
@@ -83,12 +88,13 @@ export function getHorariosDisponiveis({
     if (fimSlot > fechamento) return false;
     if (isHoje && inicioSlot < minutosAgora) return false;
 
-    const conflita = ocupados.some((a) => {
-      const inicioA = timeToMinutes(a.hora);
-      const fimA = inicioA + (a.servicoDuracao || 30);
-      return inicioSlot < fimA && inicioA < fimSlot;
-    });
-
-    return !conflita;
+    return barbeiros.some((b) => barbeiroLivre(b.id, inicioSlot, fimSlot, agendamentosDoDia));
   });
+}
+
+// Escolhe o primeiro barbeiro ativo livre em um horário específico.
+export function escolherBarbeiroDisponivel({ hora, duracaoMin, barbeiros, agendamentosDoDia }) {
+  const inicioSlot = timeToMinutes(hora);
+  const fimSlot = inicioSlot + duracaoMin;
+  return barbeiros.find((b) => barbeiroLivre(b.id, inicioSlot, fimSlot, agendamentosDoDia)) || null;
 }

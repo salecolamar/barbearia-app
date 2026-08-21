@@ -71,11 +71,10 @@ export default function MyAppointments() {
             <div key={a.id} className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <div style={{ fontWeight: 700 }}>{a.servicoNome}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>
-                    {new Date(`${a.data}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} ·{' '}
-                    {a.hora} · {a.barbeiroNome}
+                  <div style={{ fontWeight: 700 }}>
+                    {new Date(`${a.data}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} · {a.hora}
                   </div>
+                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>Com {a.barbeiroNome}</div>
                 </div>
                 <StatusChip status={a.status} passado={passado} />
               </div>

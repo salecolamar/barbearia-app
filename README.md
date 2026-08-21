@@ -97,9 +97,13 @@ O painel do barbeiro (**Agenda**) mostra os horários marcados dia a dia, com op
 
 ---
 
-## 6. Lembretes automáticos (opcional, um pouco mais técnico)
+## 6. Notificações (opcional, um pouco mais técnico)
 
-O cliente pode ativar um lembrete de notificação ao confirmar o agendamento. Para isso funcionar de verdade (mesmo com o app fechado), é preciso:
+Duas coisas dependem da mesma configuração abaixo:
+- O **cliente** pode ativar um lembrete ao confirmar o agendamento (avisa ~1h antes).
+- O **barbeiro** é avisado na hora, assim que um cliente marca um horário — basta clicar em **"Ativar notificações"** no canto superior do painel `/admin`, uma vez em cada aparelho que deve receber os avisos.
+
+Para isso funcionar de verdade (mesmo com o app fechado), é preciso:
 
 1. **Gerar a chave de notificação (VAPID):** no Firebase Console → ⚙️ Configurações do projeto → aba **Cloud Messaging** → em "Certificados push da Web", clique em **Gerar par de chaves**. Copie o valor e cole em `VAPID_KEY` no arquivo `src/firebase.js`.
 2. **Gerar a chave do servidor:** Firebase Console → ⚙️ Configurações do projeto → aba **Contas de serviço** → **"Gerar nova chave privada"**. Baixa um arquivo `.json`.
@@ -111,9 +115,9 @@ O cliente pode ativar um lembrete de notificação ao confirmar o agendamento. P
    - Intervalo: a cada 15 ou 30 minutos.
    - Salvar e ativar.
 
-A partir daí, todo cliente que ativar o lembrete recebe uma notificação cerca de 1 hora antes do horário marcado — mesmo com o app fechado (em Android sempre; no iPhone funciona no app instalado na tela de início, a partir do iOS 16.4).
+O aviso ao barbeiro (passo 4 do fluxo) já funciona assim que os passos 1-5 acima estiverem prontos — não depende do cron-job.org, só o lembrete do cliente (~1h antes) depende dele.
 
-> Sem esse passo, o app funciona normalmente — só o lembrete por notificação fica desativado.
+> Sem esse passo, o app funciona normalmente — só as notificações ficam desativadas.
 
 ---
 

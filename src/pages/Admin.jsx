@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   addDoc,
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -12,6 +13,7 @@ import {
   where,
 } from 'firebase/firestore';
 import {
+  Bell,
   Calendar,
   ChevronLeft,
   ChevronRight,
@@ -24,9 +26,11 @@ import {
   Users,
 } from 'lucide-react';
 import { db } from '../firebase';
+import { pedirTokenNotificacao } from '../notifications';
 import { DIAS_SEMANA, dateToStr } from '../utils/slots';
 
 const SESSION_KEY = 'barbearia:admin-ok';
+const NOTIF_KEY = 'barbearia:admin-notif-ok';
 
 const HORARIOS_PADRAO = Array.from({ length: 7 }, (_, dia) => ({
   aberto: dia !== 0,
@@ -157,9 +161,12 @@ function Dashboard({ config, setConfig }) {
 
   return (
     <div style={{ paddingBottom: 90 }}>
-      <header style={{ padding: '18px 20px 4px' }}>
-        <h1 style={{ fontSize: 19 }}>{config.nomeBarbearia}</h1>
-        <p style={{ fontSize: 12, color: 'var(--text-dim)' }}>Painel do barbeiro</p>
+      <header style={{ padding: '18px 20px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <h1 style={{ fontSize: 19 }}>{config.nomeBarbearia}</h1>
+          <p style={{ fontSize: 12, color: 'var(--text-dim)' }}>Painel do barbeiro</p>
+        </div>
+        <NotificacoesBarbeiro />
       </header>
 
       <div style={{ padding: '0 16px' }}>
@@ -188,6 +195,42 @@ function Dashboard({ config, setConfig }) {
         <TabBtn ativo={aba === 'horarios'} onClick={() => setAba('horarios')} icone={<Settings size={19} />} label="Horários" />
       </nav>
     </div>
+  );
+}
+
+function NotificacoesBarbeiro() {
+  const [ativo, setAtivo] = useState(localStorage.getItem(NOTIF_KEY) === '1');
+  const [carregando, setCarregando] = useState(false);
+
+  async function ativar() {
+    setCarregando(true);
+    const token = await pedirTokenNotificacao();
+    if (token) {
+      await updateDoc(doc(db, 'config', 'geral'), { barberTokens: arrayUnion(token) });
+      localStorage.setItem(NOTIF_KEY, '1');
+      setAtivo(true);
+    }
+    setCarregando(false);
+  }
+
+  if (ativo) {
+    return (
+      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--success)' }}>
+        <Bell size={14} /> Notificações ativas
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={ativar}
+      disabled={carregando}
+      className="btn btn-secondary"
+      style={{ padding: '8px 10px', fontSize: 12 }}
+    >
+      <Bell size={14} /> {carregando ? 'Ativando…' : 'Ativar notificações'}
+    </button>
   );
 }
 
@@ -278,7 +321,7 @@ function AgendaTab() {
                     {a.hora} · {a.clienteNome}
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>
-                    {a.servicoNome} · {a.barbeiroNome} · {a.clienteTelefone}
+                    {a.barbeiroNome} · {a.clienteTelefone}
                   </div>
                 </div>
                 <StatusBadge status={a.status} />
