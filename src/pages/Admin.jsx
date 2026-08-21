@@ -15,6 +15,7 @@ import {
 import {
   Bell,
   Calendar,
+  CalendarPlus,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -172,6 +173,12 @@ function Dashboard({ config, setConfig }) {
         </div>
         <NotificacoesBarbeiro />
       </header>
+
+      <div style={{ padding: '0 16px 14px' }}>
+        <a href="/?tab=agendar&novo=1" className="btn btn-secondary btn-block">
+          <CalendarPlus size={16} /> Agendar para um cliente
+        </a>
+      </div>
 
       <div style={{ padding: '0 16px' }}>
         {aba === 'agendados' && <AgendaTab />}

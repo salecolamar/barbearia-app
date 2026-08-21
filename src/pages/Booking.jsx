@@ -10,8 +10,8 @@ import DayStrip from '../components/DayStrip';
 import TimeSlotGrid from '../components/TimeSlotGrid';
 import ServiceSelect from '../components/ServiceSelect';
 
-export default function Booking() {
-  const clienteSalvo = getClienteSalvo();
+export default function Booking({ forcarCadastro = false }) {
+  const clienteSalvo = forcarCadastro ? null : getClienteSalvo();
   const [passo, setPasso] = useState(clienteSalvo ? 'horario' : 'cadastro');
   const [carregando, setCarregando] = useState(true);
   const [erroCarregamento, setErroCarregamento] = useState(false);

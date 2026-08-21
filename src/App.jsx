@@ -6,9 +6,12 @@ import Booking from './pages/Booking';
 import MyAppointments from './pages/MyAppointments';
 import Admin from './pages/Admin';
 
+const abaInicial = new URLSearchParams(window.location.search).get('tab') === 'agendar' ? 'agendar' : 'inicio';
+const forcarNovoCliente = new URLSearchParams(window.location.search).get('novo') === '1';
+
 export default function App() {
   const [authOk, setAuthOk] = useState(false);
-  const [aba, setAba] = useState('inicio');
+  const [aba, setAba] = useState(abaInicial);
   const isAdmin = window.location.pathname.startsWith('/admin');
 
   useEffect(() => {
@@ -34,7 +37,7 @@ export default function App() {
 
       <main style={{ flex: 1, padding: '0 16px 90px' }}>
         {aba === 'inicio' && <HomePage irParaAgendar={() => setAba('agendar')} />}
-        {aba === 'agendar' && <Booking />}
+        {aba === 'agendar' && <Booking forcarCadastro={forcarNovoCliente} />}
         {aba === 'meus' && <MyAppointments />}
       </main>
 
