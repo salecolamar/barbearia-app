@@ -58,7 +58,12 @@ export default function App() {
           <HomeIcon size={20} />
           Início
         </button>
-        <button type="button" onClick={() => setAba('agendar')} style={navBtnStyle(aba === 'agendar')}>
+        <button
+          type="button"
+          aria-disabled="true"
+          title='Toque em "Agendar horário" na tela de início'
+          style={{ ...navBtnStyle(aba === 'agendar'), cursor: 'default' }}
+        >
           <Calendar size={20} />
           Agendar
         </button>
