@@ -12,25 +12,12 @@
     <!-- iOS: comportamento de app em tela cheia -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta id="apple-title" name="apple-mobile-web-app-title" content="Barbearia" />
-    <link id="apple-icon" rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Barbearia" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 
     <!-- Android / geral -->
-    <link id="manifest-link" rel="manifest" href="/manifest.json" />
-    <link id="favicon-link" rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
-
-    <!-- No /admin, troca pra manifesto/ícone do painel do barbeiro, pra ficar
-         um atalho separado (com nome e ícone diferentes) do app do cliente
-         quando cada um for adicionado à tela inicial do celular. -->
-    <script>
-      if (location.pathname.startsWith('/admin')) {
-        document.title = 'Painel do Barbeiro';
-        document.getElementById('apple-title').content = 'Painel Barbeiro';
-        document.getElementById('apple-icon').href = '/icons/apple-touch-icon-admin.png';
-        document.getElementById('manifest-link').href = '/manifest-admin.json';
-        document.getElementById('favicon-link').href = '/icons/favicon-32-admin.png';
-      }
-    </script>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
 
     <style>
       html, body { margin: 0; padding: 0; background: #141414; height: 100%; }

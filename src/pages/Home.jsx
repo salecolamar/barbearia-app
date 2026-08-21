@@ -1,12 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { Calendar, Clock, MapPin, Phone } from 'lucide-react';
 import { db } from '../firebase';
 import { formatarHorarios } from '../utils/slots';
 import logo from '../assets/logo.jpg';
 
+const TOQUES_PARA_PAINEL = 5;
+const JANELA_TOQUES_MS = 1500;
+
 export default function Home({ irParaAgendar }) {
   const [config, setConfig] = useState(undefined);
+  const toquesRef = useRef(0);
+  const timeoutRef = useRef(null);
+
+  function tocarLogo() {
+    toquesRef.current += 1;
+    if (toquesRef.current >= TOQUES_PARA_PAINEL) {
+      window.location.href = '/admin';
+      return;
+    }
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      toquesRef.current = 0;
+    }, JANELA_TOQUES_MS);
+  }
 
   useEffect(() => {
     getDoc(doc(db, 'config', 'geral'))
@@ -38,6 +55,7 @@ export default function Home({ irParaAgendar }) {
         <img
           src={logo}
           alt={config.nomeBarbearia}
+          onClick={tocarLogo}
           style={{ width: 140, height: 140, borderRadius: '50%', objectFit: 'cover', margin: '0 auto 14px' }}
         />
         <h1 style={{ fontSize: 22 }}>{config.nomeBarbearia}</h1>
