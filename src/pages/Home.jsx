@@ -50,7 +50,7 @@ export default function Home({ irParaAgendar }) {
   const whatsappUrl = config.whatsapp ? `https://wa.me/${config.whatsapp.replace(/\D/g, '')}` : null;
 
   return (
-    <div style={{ paddingTop: 4, display: 'flex', flexDirection: 'column', gap: 6, height: '100%' }}>
+    <div style={{ paddingTop: 4, display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div className="card" style={{ textAlign: 'center', padding: '10px 14px' }}>
         <img
           src={logo}
@@ -106,7 +106,7 @@ export default function Home({ irParaAgendar }) {
         </div>
       )}
 
-      <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 'auto' }} onClick={irParaAgendar}>
+      <button type="button" className="btn btn-primary btn-block" onClick={irParaAgendar}>
         <Calendar size={16} /> Agendar horário
       </button>
     </div>
