@@ -149,3 +149,39 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
   background: var(--border);
   border-radius: 999px;
 }
+
+.home-stack {
+  gap: 10px;
+}
+
+.home-hero {
+  padding: 18px 20px;
+}
+
+.home-logo {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 12px;
+}
+
+.home-card {
+  padding: 16px;
+}
+
+/* Telas baixas (ex: iPhone SE): encolhe só o necessário pra caber sem rolar. */
+@media (max-height: 700px) {
+  .home-stack {
+    gap: 6px;
+  }
+  .home-hero {
+    padding: 10px 20px;
+  }
+  .home-logo {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 6px;
+  }
+  .home-card {
+    padding: 8px 16px;
+  }
+}
