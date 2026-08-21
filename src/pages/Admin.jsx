@@ -191,7 +191,6 @@ function Dashboard({ config, setConfig }) {
           width: '100%',
           maxWidth: 520,
           display: 'flex',
-          overflowX: 'auto',
           borderTop: '1px solid var(--border)',
           background: 'var(--panel)',
         }}
@@ -249,8 +248,8 @@ function TabBtn({ ativo, onClick, icone, label }) {
       type="button"
       onClick={onClick}
       style={{
-        flex: '0 0 auto',
-        minWidth: 74,
+        flex: 1,
+        minWidth: 0,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
