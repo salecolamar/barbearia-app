@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { Calendar, Clock, MapPin, Phone, Scissors } from 'lucide-react';
+import { Calendar, Clock, MapPin, Phone } from 'lucide-react';
 import { db } from '../firebase';
 import { formatarHorarios } from '../utils/slots';
+import logo from '../assets/logo.jpg';
 
 export default function Home({ irParaAgendar }) {
   const [config, setConfig] = useState(undefined);
@@ -33,21 +34,12 @@ export default function Home({ irParaAgendar }) {
 
   return (
     <div style={{ paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div className="card" style={{ textAlign: 'center', padding: '28px 20px' }}>
-        <div
-          style={{
-            width: 56,
-            height: 56,
-            borderRadius: '50%',
-            background: 'rgba(201,162,39,0.15)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 14px',
-          }}
-        >
-          <Scissors size={26} color="var(--gold)" />
-        </div>
+      <div className="card" style={{ textAlign: 'center', padding: '24px 20px' }}>
+        <img
+          src={logo}
+          alt={config.nomeBarbearia}
+          style={{ width: 140, height: 140, borderRadius: '50%', objectFit: 'cover', margin: '0 auto 14px' }}
+        />
         <h1 style={{ fontSize: 22 }}>{config.nomeBarbearia}</h1>
         {config.descricao && (
           <p style={{ color: 'var(--text-dim)', fontSize: 14, marginTop: 8 }}>{config.descricao}</p>
