@@ -50,7 +50,7 @@ export default function Home({ irParaAgendar }) {
   const whatsappUrl = config.whatsapp ? `https://wa.me/${config.whatsapp.replace(/\D/g, '')}` : null;
 
   return (
-    <div style={{ paddingTop: 4, display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div style={{ paddingTop: 4, display: 'flex', flexDirection: 'column', gap: 12, flex: 1, justifyContent: 'space-between' }}>
       <div className="card" style={{ textAlign: 'center', padding: '10px 14px' }}>
         <img
           src={logo}
