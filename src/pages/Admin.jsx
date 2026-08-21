@@ -19,6 +19,7 @@ import {
   ChevronRight,
   Clock,
   Lock,
+  Pencil,
   Plus,
   Scissors,
   Settings,
@@ -501,6 +502,11 @@ function ServicosTab() {
   const [duracao, setDuracao] = useState('30');
   const [preco, setPreco] = useState('');
 
+  const [editandoId, setEditandoId] = useState(null);
+  const [editNome, setEditNome] = useState('');
+  const [editDuracao, setEditDuracao] = useState('');
+  const [editPreco, setEditPreco] = useState('');
+
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'servicos'), (snap) => {
       setLista(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
@@ -522,14 +528,27 @@ function ServicosTab() {
     setPreco('');
   }
 
+  function iniciarEdicao(s) {
+    setEditandoId(s.id);
+    setEditNome(s.nome);
+    setEditDuracao(String(s.duracaoMin || ''));
+    setEditPreco(s.preco != null ? String(s.preco) : '');
+  }
+
+  async function salvarEdicao(id) {
+    if (!editNome.trim() || !editDuracao) return;
+    await updateDoc(doc(db, 'servicos', id), {
+      nome: editNome.trim(),
+      duracaoMin: Number(editDuracao),
+      preco: editPreco ? Number(editPreco) : null,
+    });
+    setEditandoId(null);
+  }
+
   return (
-    <ListaCadastro
-      titulo="Serviços"
-      lista={lista}
-      renderItem={(s) => `${s.nome} · ${s.duracaoMin} min${s.preco ? ` · R$ ${Number(s.preco).toFixed(2)}` : ''}`}
-      onToggleAtivo={(s) => updateDoc(doc(db, 'servicos', s.id), { ativo: !s.ativo })}
-      onExcluir={(s) => deleteDoc(doc(db, 'servicos', s.id))}
-    >
+    <div style={{ paddingTop: 8 }}>
+      <h2 style={{ fontSize: 17, marginBottom: 14 }}>Serviços</h2>
+
       <form onSubmit={adicionar} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
         <input placeholder="Nome do serviço (ex: Corte)" value={nome} onChange={(e) => setNome(e.target.value)} />
         <div style={{ display: 'flex', gap: 8 }}>
@@ -540,7 +559,67 @@ function ServicosTab() {
           <Plus size={18} /> Adicionar serviço
         </button>
       </form>
-    </ListaCadastro>
+
+      {lista === null ? (
+        <p style={{ color: 'var(--text-dim)' }}>Carregando…</p>
+      ) : lista.length === 0 ? (
+        <p style={{ color: 'var(--text-dim)' }}>Nenhum cadastro ainda.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {lista.map((s) =>
+            editandoId === s.id ? (
+              <div key={s.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <input placeholder="Nome do serviço" value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    placeholder="Duração (min)"
+                    value={editDuracao}
+                    onChange={(e) => setEditDuracao(e.target.value.replace(/\D/g, ''))}
+                    inputMode="numeric"
+                  />
+                  <input
+                    placeholder="Preço R$"
+                    value={editPreco}
+                    onChange={(e) => setEditPreco(e.target.value.replace(/[^\d.]/g, ''))}
+                    inputMode="decimal"
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setEditandoId(null)}>
+                    Cancelar
+                  </button>
+                  <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={() => salvarEdicao(s.id)}>
+                    Salvar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div key={s.id} className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ opacity: s.ativo === false ? 0.5 : 1 }}>
+                  {s.nome} · {s.duracaoMin} min{s.preco ? ` · R$ ${Number(s.preco).toFixed(2)}` : ''}
+                </span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" className="btn btn-secondary" style={{ padding: '6px 10px' }} onClick={() => iniciarEdicao(s)}>
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: '6px 10px', fontSize: 12 }}
+                    onClick={() => updateDoc(doc(db, 'servicos', s.id), { ativo: !s.ativo })}
+                  >
+                    {s.ativo === false ? 'Ativar' : 'Pausar'}
+                  </button>
+                  <button type="button" className="btn btn-danger" style={{ padding: '6px 10px' }} onClick={() => deleteDoc(doc(db, 'servicos', s.id))}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
