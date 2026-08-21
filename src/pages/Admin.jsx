@@ -22,6 +22,7 @@ import {
   Plus,
   Scissors,
   Settings,
+  Store,
   Trash2,
   Users,
 } from 'lucide-react';
@@ -174,6 +175,7 @@ function Dashboard({ config, setConfig }) {
         {aba === 'barbeiros' && <BarbeirosTab />}
         {aba === 'servicos' && <ServicosTab />}
         {aba === 'horarios' && <HorariosTab config={config} setConfig={setConfig} />}
+        {aba === 'perfil' && <PerfilTab config={config} setConfig={setConfig} />}
       </div>
 
       <nav
@@ -193,6 +195,7 @@ function Dashboard({ config, setConfig }) {
         <TabBtn ativo={aba === 'barbeiros'} onClick={() => setAba('barbeiros')} icone={<Users size={19} />} label="Barbeiros" />
         <TabBtn ativo={aba === 'servicos'} onClick={() => setAba('servicos')} icone={<Scissors size={19} />} label="Serviços" />
         <TabBtn ativo={aba === 'horarios'} onClick={() => setAba('horarios')} icone={<Settings size={19} />} label="Horários" />
+        <TabBtn ativo={aba === 'perfil'} onClick={() => setAba('perfil')} icone={<Store size={19} />} label="Perfil" />
       </nav>
     </div>
   );
@@ -537,3 +540,68 @@ function HorariosTab({ config, setConfig }) {
     </div>
   );
 }
+
+// ---------- Perfil ----------
+
+function PerfilTab({ config, setConfig }) {
+  const [nome, setNome] = useState(config.nomeBarbearia || '');
+  const [descricao, setDescricao] = useState(config.descricao || '');
+  const [endereco, setEndereco] = useState(config.endereco || '');
+  const [whatsapp, setWhatsapp] = useState(config.whatsapp || '');
+  const [salvando, setSalvando] = useState(false);
+  const [salvo, setSalvo] = useState(false);
+
+  async function salvar(e) {
+    e.preventDefault();
+    setSalvando(true);
+    const dados = { nomeBarbearia: nome.trim() || 'Minha Barbearia', descricao: descricao.trim(), endereco: endereco.trim(), whatsapp: whatsapp.trim() };
+    await updateDoc(doc(db, 'config', 'geral'), dados);
+    setConfig((prev) => ({ ...prev, ...dados }));
+    setSalvando(false);
+    setSalvo(true);
+  }
+
+  return (
+    <div style={{ paddingTop: 8 }}>
+      <h2 style={{ fontSize: 17, marginBottom: 14 }}>Perfil da barbearia</h2>
+      <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 14 }}>
+        Essas informações aparecem na tela inicial do app do cliente.
+      </p>
+
+      <form onSubmit={salvar} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <label style={labelStyle}>Nome da barbearia</label>
+        <input value={nome} onChange={(e) => { setNome(e.target.value); setSalvo(false); }} placeholder="Nome da barbearia" />
+
+        <label style={labelStyle}>Apresentação (opcional)</label>
+        <textarea
+          value={descricao}
+          onChange={(e) => { setDescricao(e.target.value); setSalvo(false); }}
+          placeholder="Ex: Cortes modernos e barba em ambiente climatizado."
+          rows={3}
+          style={{ resize: 'vertical' }}
+        />
+
+        <label style={labelStyle}>Endereço (opcional)</label>
+        <input
+          value={endereco}
+          onChange={(e) => { setEndereco(e.target.value); setSalvo(false); }}
+          placeholder="Rua, número, bairro, cidade"
+        />
+
+        <label style={labelStyle}>WhatsApp de contato (opcional)</label>
+        <input
+          value={whatsapp}
+          onChange={(e) => { setWhatsapp(e.target.value); setSalvo(false); }}
+          placeholder="Ex: 5511999999999 (com DDI e DDD)"
+          inputMode="tel"
+        />
+
+        <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: 6 }} disabled={salvando}>
+          {salvando ? 'Salvando…' : salvo ? 'Salvo ✓' : 'Salvar perfil'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+const labelStyle = { fontSize: 12, color: 'var(--text-dim)', marginBottom: -4 };

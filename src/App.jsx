@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Calendar, ListChecks, Scissors } from 'lucide-react';
+import { Calendar, Home as HomeIcon, ListChecks, Scissors } from 'lucide-react';
 import { authReady } from './firebase';
+import HomePage from './pages/Home';
 import Booking from './pages/Booking';
 import MyAppointments from './pages/MyAppointments';
 import Admin from './pages/Admin';
 
 export default function App() {
   const [authOk, setAuthOk] = useState(false);
-  const [aba, setAba] = useState('agendar');
+  const [aba, setAba] = useState('inicio');
   const isAdmin = window.location.pathname.startsWith('/admin');
 
   useEffect(() => {
@@ -32,7 +33,9 @@ export default function App() {
       </header>
 
       <main style={{ flex: 1, padding: '0 16px 90px' }}>
-        {aba === 'agendar' ? <Booking /> : <MyAppointments />}
+        {aba === 'inicio' && <HomePage irParaAgendar={() => setAba('agendar')} />}
+        {aba === 'agendar' && <Booking />}
+        {aba === 'meus' && <MyAppointments />}
       </main>
 
       <nav
@@ -48,19 +51,15 @@ export default function App() {
           background: 'var(--panel)',
         }}
       >
-        <button
-          type="button"
-          onClick={() => setAba('agendar')}
-          style={navBtnStyle(aba === 'agendar')}
-        >
+        <button type="button" onClick={() => setAba('inicio')} style={navBtnStyle(aba === 'inicio')}>
+          <HomeIcon size={20} />
+          Início
+        </button>
+        <button type="button" onClick={() => setAba('agendar')} style={navBtnStyle(aba === 'agendar')}>
           <Calendar size={20} />
           Agendar
         </button>
-        <button
-          type="button"
-          onClick={() => setAba('meus')}
-          style={navBtnStyle(aba === 'meus')}
-        >
+        <button type="button" onClick={() => setAba('meus')} style={navBtnStyle(aba === 'meus')}>
           <ListChecks size={20} />
           Meus horários
         </button>

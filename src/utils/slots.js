@@ -98,3 +98,30 @@ export function escolherBarbeiroDisponivel({ hora, duracaoMin, barbeiros, agenda
   const fimSlot = inicioSlot + duracaoMin;
   return barbeiros.find((b) => barbeiroLivre(b.id, inicioSlot, fimSlot, agendamentosDoDia)) || null;
 }
+
+// Resume o horário de funcionamento da semana em linhas curtas, agrupando
+// dias seguidos com o mesmo horário (ex: "Seg a Sex: 09:00–19:00").
+export function formatarHorarios(horariosConfig) {
+  const ordem = [1, 2, 3, 4, 5, 6, 0];
+  const grupos = [];
+
+  for (const dia of ordem) {
+    const h = horariosConfig[dia];
+    if (!h) continue;
+    const chave = h.aberto ? `${h.inicio}-${h.fim}` : 'fechado';
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo && ultimo.chave === chave) {
+      ultimo.dias.push(dia);
+    } else {
+      grupos.push({ chave, dias: [dia], aberto: h.aberto, inicio: h.inicio, fim: h.fim });
+    }
+  }
+
+  return grupos.map((g) => {
+    const label =
+      g.dias.length > 1
+        ? `${DIAS_SEMANA_ABREV[g.dias[0]]} a ${DIAS_SEMANA_ABREV[g.dias[g.dias.length - 1]]}`
+        : DIAS_SEMANA_ABREV[g.dias[0]];
+    return g.aberto ? `${label}: ${g.inicio}–${g.fim}` : `${label}: Fechado`;
+  });
+}

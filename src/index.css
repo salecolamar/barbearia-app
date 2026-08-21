@@ -50,7 +50,7 @@ button {
   font: inherit;
 }
 
-input, select {
+input, select, textarea {
   font: inherit;
   color: var(--text);
   background: var(--panel-2);
@@ -60,7 +60,7 @@ input, select {
   width: 100%;
 }
 
-input:focus, select:focus, button:focus-visible {
+input:focus, select:focus, textarea:focus, button:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 1px;
 }
