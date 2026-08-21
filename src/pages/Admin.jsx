@@ -24,7 +24,9 @@ import {
   Settings,
   Store,
   Trash2,
+  UserCheck,
   Users,
+  Wallet,
 } from 'lucide-react';
 import { db } from '../firebase';
 import { pedirTokenNotificacao } from '../notifications';
@@ -158,7 +160,7 @@ function PinScreen({ pinCorreto, onOk }) {
 }
 
 function Dashboard({ config, setConfig }) {
-  const [aba, setAba] = useState('agenda');
+  const [aba, setAba] = useState('agendados');
 
   return (
     <div style={{ paddingBottom: 90 }}>
@@ -171,7 +173,8 @@ function Dashboard({ config, setConfig }) {
       </header>
 
       <div style={{ padding: '0 16px' }}>
-        {aba === 'agenda' && <AgendaTab />}
+        {aba === 'agendados' && <AgendaTab />}
+        {aba === 'financeiro' && <FinanceiroTab />}
         {aba === 'barbeiros' && <BarbeirosTab />}
         {aba === 'servicos' && <ServicosTab />}
         {aba === 'horarios' && <HorariosTab config={config} setConfig={setConfig} />}
@@ -187,11 +190,13 @@ function Dashboard({ config, setConfig }) {
           width: '100%',
           maxWidth: 520,
           display: 'flex',
+          overflowX: 'auto',
           borderTop: '1px solid var(--border)',
           background: 'var(--panel)',
         }}
       >
-        <TabBtn ativo={aba === 'agenda'} onClick={() => setAba('agenda')} icone={<Calendar size={19} />} label="Agenda" />
+        <TabBtn ativo={aba === 'agendados'} onClick={() => setAba('agendados')} icone={<Calendar size={19} />} label="Agendados" />
+        <TabBtn ativo={aba === 'financeiro'} onClick={() => setAba('financeiro')} icone={<Wallet size={19} />} label="Financeiro" />
         <TabBtn ativo={aba === 'barbeiros'} onClick={() => setAba('barbeiros')} icone={<Users size={19} />} label="Barbeiros" />
         <TabBtn ativo={aba === 'servicos'} onClick={() => setAba('servicos')} icone={<Scissors size={19} />} label="Serviços" />
         <TabBtn ativo={aba === 'horarios'} onClick={() => setAba('horarios')} icone={<Settings size={19} />} label="Horários" />
@@ -243,7 +248,8 @@ function TabBtn({ ativo, onClick, icone, label }) {
       type="button"
       onClick={onClick}
       style={{
-        flex: 1,
+        flex: '0 0 auto',
+        minWidth: 74,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -263,7 +269,7 @@ function TabBtn({ ativo, onClick, icone, label }) {
   );
 }
 
-// ---------- Agenda ----------
+// ---------- Agendados ----------
 
 function AgendaTab() {
   const [data, setData] = useState(new Date());
@@ -345,7 +351,7 @@ function AgendaTab() {
               {a.status === 'confirmado' && (
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => mudarStatus(a.id, 'concluido')}>
-                    Concluído
+                    <UserCheck size={14} /> Confirmar presença
                   </button>
                   <button type="button" className="btn btn-danger" style={{ flex: 1 }} onClick={() => mudarStatus(a.id, 'cancelado')}>
                     Cancelar
@@ -367,8 +373,86 @@ function AgendaTab() {
 
 function StatusBadge({ status }) {
   if (status === 'cancelado') return <span className="chip chip-danger">Cancelado</span>;
-  if (status === 'concluido') return <span className="chip chip-success">Concluído</span>;
+  if (status === 'concluido') return <span className="chip chip-success">Compareceu</span>;
   return <span className="chip chip-gold">Confirmado</span>;
+}
+
+// ---------- Financeiro ----------
+
+function FinanceiroTab() {
+  const [data, setData] = useState(new Date());
+  const [agendamentos, setAgendamentos] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const dataStr = dateToStr(data);
+
+  useEffect(() => {
+    setCarregando(true);
+    const q = query(collection(db, 'agendamentos'), where('data', '==', dataStr), where('status', '==', 'concluido'));
+    const unsub = onSnapshot(q, (snap) => {
+      const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.hora.localeCompare(b.hora));
+      setAgendamentos(lista);
+      setCarregando(false);
+    });
+    return unsub;
+  }, [dataStr]);
+
+  function mudarDia(delta) {
+    const nova = new Date(data);
+    nova.setDate(nova.getDate() + delta);
+    setData(nova);
+  }
+
+  const total = agendamentos.reduce((soma, a) => soma + (a.valorTotal || 0), 0);
+
+  return (
+    <div style={{ paddingTop: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <button type="button" onClick={() => mudarDia(-1)} className="btn btn-secondary" style={{ padding: 8 }}>
+          <ChevronLeft size={18} />
+        </button>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontWeight: 700 }}>{data.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' })}</div>
+        </div>
+        <button type="button" onClick={() => mudarDia(1)} className="btn btn-secondary" style={{ padding: 8 }}>
+          <ChevronRight size={18} />
+        </button>
+      </div>
+
+      <div className="card" style={{ textAlign: 'center', marginBottom: 14, padding: '18px 16px' }}>
+        <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>Total recebido no dia</p>
+        <p style={{ fontSize: 28, fontWeight: 800, color: 'var(--gold)' }}>R$ {total.toFixed(2).replace('.', ',')}</p>
+        <p style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
+          {agendamentos.length} atendimento{agendamentos.length !== 1 ? 's' : ''} com presença confirmada
+        </p>
+      </div>
+
+      {carregando ? (
+        <p style={{ color: 'var(--text-dim)' }}>Carregando…</p>
+      ) : agendamentos.length === 0 ? (
+        <p style={{ color: 'var(--text-dim)', textAlign: 'center', marginTop: 20 }}>
+          Nenhum atendimento com presença confirmada nesse dia ainda.
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {agendamentos.map((a) => (
+            <div key={a.id} className="card" style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontWeight: 700 }}>
+                  {a.hora} · {a.clienteNome}
+                </div>
+                {a.servicos?.length > 0 && (
+                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>{a.servicos.map((s) => s.nome).join(', ')}</div>
+                )}
+              </div>
+              <div style={{ fontWeight: 700, color: 'var(--gold)', fontSize: 14, whiteSpace: 'nowrap' }}>
+                R$ {(a.valorTotal || 0).toFixed(2).replace('.', ',')}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ---------- Barbeiros ----------
