@@ -50,26 +50,26 @@ export default function Home({ irParaAgendar }) {
   const whatsappUrl = config.whatsapp ? `https://wa.me/${config.whatsapp.replace(/\D/g, '')}` : null;
 
   return (
-    <div style={{ paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div className="card" style={{ textAlign: 'center', padding: '24px 20px' }}>
+    <div style={{ paddingTop: 4, display: 'flex', flexDirection: 'column', gap: 6, height: '100%' }}>
+      <div className="card" style={{ textAlign: 'center', padding: '10px 14px' }}>
         <img
           src={logo}
           alt={config.nomeBarbearia}
           onClick={tocarLogo}
-          style={{ width: 140, height: 140, borderRadius: '50%', objectFit: 'cover', margin: '0 auto 14px' }}
+          style={{ width: 76, height: 76, borderRadius: '50%', objectFit: 'cover', margin: '0 auto 8px' }}
         />
-        <h1 style={{ fontSize: 22 }}>{config.nomeBarbearia}</h1>
+        <h1 style={{ fontSize: 19 }}>{config.nomeBarbearia}</h1>
         {config.descricao && (
-          <p style={{ color: 'var(--text-dim)', fontSize: 14, marginTop: 8 }}>{config.descricao}</p>
+          <p style={{ color: 'var(--text-dim)', fontSize: 13, marginTop: 4 }}>{config.descricao}</p>
         )}
       </div>
 
       {config.horarios && (
-        <div className="card">
-          <SecaoTitulo icone={<Clock size={16} />} texto="Horário de funcionamento" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div className="card" style={{ padding: '10px 14px' }}>
+          <SecaoTitulo icone={<Clock size={15} />} texto="Horário de funcionamento" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {formatarHorarios(config.horarios).map((linha) => (
-              <p key={linha} style={{ fontSize: 14, color: 'var(--text-dim)' }}>
+              <p key={linha} style={{ fontSize: 13, color: 'var(--text-dim)' }}>
                 {linha}
               </p>
             ))}
@@ -78,26 +78,35 @@ export default function Home({ irParaAgendar }) {
       )}
 
       {config.endereco && (
-        <a href={enderecoUrl} target="_blank" rel="noreferrer" className="card" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-          <SecaoTitulo icone={<MapPin size={16} />} texto="Endereço" />
-          <p style={{ fontSize: 14, color: 'var(--text-dim)' }}>{config.endereco}</p>
-          <p style={{ fontSize: 13, color: 'var(--gold)', marginTop: 6 }}>Abrir no mapa →</p>
+        <a
+          href={enderecoUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="card"
+          style={{ textDecoration: 'none', color: 'inherit', display: 'block', padding: '10px 14px' }}
+        >
+          <SecaoTitulo icone={<MapPin size={15} />} texto="Endereço" />
+          <p style={{ fontSize: 13, color: 'var(--text-dim)' }}>{config.endereco}</p>
+          <p style={{ fontSize: 12, color: 'var(--gold)', marginTop: 4 }}>Abrir no mapa →</p>
         </a>
       )}
 
-      {config.whatsapp && (
-        <a href={whatsappUrl} target="_blank" rel="noreferrer" className="btn btn-secondary btn-block">
-          <Phone size={16} /> Falar no WhatsApp
-        </a>
+      {(config.whatsapp || config.instagram) && (
+        <div style={{ display: 'flex', gap: 8 }}>
+          {config.whatsapp && (
+            <a href={whatsappUrl} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ flex: 1 }}>
+              <Phone size={16} /> WhatsApp
+            </a>
+          )}
+          {config.instagram && (
+            <a href={config.instagram} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ flex: 1 }}>
+              <AtSign size={16} /> Instagram
+            </a>
+          )}
+        </div>
       )}
 
-      {config.instagram && (
-        <a href={config.instagram} target="_blank" rel="noreferrer" className="btn btn-secondary btn-block">
-          <AtSign size={16} /> Seguir no Instagram
-        </a>
-      )}
-
-      <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 4 }} onClick={irParaAgendar}>
+      <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 'auto' }} onClick={irParaAgendar}>
         <Calendar size={16} /> Agendar horário
       </button>
     </div>
@@ -106,7 +115,7 @@ export default function Home({ irParaAgendar }) {
 
 function SecaoTitulo({ icone, texto }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--gold)', marginBottom: 8, fontSize: 13, fontWeight: 700 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--gold)', marginBottom: 5, fontSize: 13, fontWeight: 700 }}>
       {icone}
       {texto}
     </div>
