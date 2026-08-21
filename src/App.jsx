@@ -29,7 +29,7 @@ export default function App() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <header style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 20px 14px' }}>
         <Scissors size={22} color="var(--gold)" />
-        <h1 style={{ fontSize: 20 }}>Barbearia</h1>
+        <h1 style={{ fontSize: 20 }}>Sistema de Agendamento</h1>
       </header>
 
       <main style={{ flex: 1, padding: '0 16px 90px' }}>
