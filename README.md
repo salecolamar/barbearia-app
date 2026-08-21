@@ -100,7 +100,7 @@ O painel do barbeiro (**Agenda**) mostra os horários marcados dia a dia, com op
 ## 6. Notificações (opcional, um pouco mais técnico)
 
 Duas coisas dependem da mesma configuração abaixo:
-- O **cliente** pode ativar um lembrete ao confirmar o agendamento (avisa ~1h antes).
+- O **cliente** pode ativar um lembrete ao confirmar o agendamento (avisa ~30 min antes).
 - O **barbeiro** é avisado na hora, assim que um cliente marca um horário — basta clicar em **"Ativar notificações"** no canto superior do painel `/admin`, uma vez em cada aparelho que deve receber os avisos.
 
 Para isso funcionar de verdade (mesmo com o app fechado), é preciso:
@@ -112,10 +112,10 @@ Para isso funcionar de verdade (mesmo com o app fechado), é preciso:
 5. Depois de salvar as variáveis, vá em **Deployments** → ⋯ do último deploy → **Redeploy**.
 6. Crie uma conta grátis em **cron-job.org**, e configure um "cronjob" novo:
    - URL: `https://SEU-LINK.vercel.app/api/send-reminders?secret=SEU_REMINDER_SECRET`
-   - Intervalo: a cada 15 ou 30 minutos.
+   - Intervalo: a cada 10 minutos (pra pegar o aviso perto dos 30 min antes, sem atraso grande).
    - Salvar e ativar.
 
-O aviso ao barbeiro (passo 4 do fluxo) já funciona assim que os passos 1-5 acima estiverem prontos — não depende do cron-job.org, só o lembrete do cliente (~1h antes) depende dele.
+O aviso ao barbeiro (passo 4 do fluxo) já funciona assim que os passos 1-5 acima estiverem prontos — não depende do cron-job.org, só o lembrete do cliente (~30 min antes) depende dele.
 
 > Sem esse passo, o app funciona normalmente — só as notificações ficam desativadas.
 

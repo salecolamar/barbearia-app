@@ -1,11 +1,13 @@
 // Envia notificação de lembrete (push) para clientes com agendamento
-// confirmado começando dentro da próxima 1 hora.
+// confirmado começando dentro dos próximos 30 minutos.
 //
 // Chamado periodicamente por um serviço de cron externo (ex: cron-job.org),
-// batendo em /api/send-reminders?secret=SEU_SEGREDO a cada 15-30 minutos.
-// Veja o GUIA.md para configurar as variáveis de ambiente necessárias.
+// batendo em /api/send-reminders?secret=SEU_SEGREDO a cada 10 minutos.
+// Veja o README.md para configurar as variáveis de ambiente necessárias.
 
 import admin from 'firebase-admin';
+
+const JANELA_LEMBRETE_MIN = 30;
 
 function getApp() {
   if (admin.apps.length) return admin.apps[0];
@@ -54,14 +56,16 @@ export default async function handler(req, res) {
       const apptBR = new Date(Date.UTC(y, m - 1, d, hh, mm));
       const diffMin = (apptBR.getTime() - nowBR.getTime()) / 60000;
 
-      if (diffMin <= 0 || diffMin > 60) continue;
+      if (diffMin <= 0 || diffMin > JANELA_LEMBRETE_MIN) continue;
+
+      const servicosTexto = a.servicos?.length ? a.servicos.map((s) => s.nome).join(', ') : 'seu horário';
 
       try {
         await admin.messaging(app).send({
           token: a.fcmToken,
           notification: {
             title: 'Seu horário está chegando!',
-            body: `${a.servicoNome} às ${a.hora} com ${a.barbeiroNome}.`,
+            body: `${servicosTexto} às ${a.hora} com ${a.barbeiroNome}.`,
           },
         });
         await docSnap.ref.update({ lembreteEnviado: true });
