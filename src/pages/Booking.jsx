@@ -4,13 +4,9 @@ import { Bell, Check, ChevronLeft, Clock, User } from 'lucide-react';
 import { db } from '../firebase';
 import { pedirTokenNotificacao } from '../notifications';
 import { getClienteSalvo, salvarCliente } from '../utils/storage';
-import {
-  DIAS_SEMANA_ABREV,
-  dateToStr,
-  escolherBarbeiroDisponivel,
-  getHorariosDisponiveisGeral,
-  proximosDias,
-} from '../utils/slots';
+import { dateToStr, escolherBarbeiroDisponivel, getHorariosDisponiveisGeral, proximosDias } from '../utils/slots';
+import DayStrip from '../components/DayStrip';
+import TimeSlotGrid from '../components/TimeSlotGrid';
 
 export default function Booking() {
   const clienteSalvo = getClienteSalvo();
@@ -208,54 +204,13 @@ export default function Booking() {
 
       {passo === 'horario' && (
         <Etapa titulo="Escolha o horário" icone={<Clock size={18} />}>
-          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 4 }}>
-            {dias.map((d) => {
-              const str = dateToStr(d);
-              const ativo = str === dataStr;
-              return (
-                <button
-                  key={str}
-                  type="button"
-                  onClick={() => setDataStr(str)}
-                  style={{
-                    flex: '0 0 auto',
-                    textAlign: 'center',
-                    padding: '10px 12px',
-                    borderRadius: 12,
-                    border: ativo ? '1px solid var(--gold)' : '1px solid var(--border)',
-                    background: ativo ? 'rgba(201,162,39,0.12)' : 'var(--panel)',
-                    color: ativo ? 'var(--gold)' : 'var(--text)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <div style={{ fontSize: 11 }}>{DIAS_SEMANA_ABREV[d.getDay()]}</div>
-                  <div style={{ fontSize: 16, fontWeight: 700 }}>{d.getDate()}</div>
-                </button>
-              );
-            })}
+          <DayStrip dias={dias} dataStr={dataStr} onSelect={setDataStr} />
+
+          {erro && <p style={{ color: 'var(--danger)', fontSize: 13, marginTop: -4 }}>{erro}</p>}
+
+          <div style={{ marginTop: 4 }}>
+            <TimeSlotGrid horarios={horariosDisponiveis} carregando={carregandoHorarios} onSelect={escolherHorario} />
           </div>
-
-          {erro && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{erro}</p>}
-
-          {carregandoHorarios ? (
-            <p style={{ color: 'var(--text-dim)' }}>Verificando horários livres…</p>
-          ) : horariosDisponiveis.length === 0 ? (
-            <p style={{ color: 'var(--text-dim)' }}>Sem horários livres nesse dia. Escolha outra data.</p>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {horariosDisponiveis.map((h) => (
-                <button
-                  key={h}
-                  type="button"
-                  className="card"
-                  onClick={() => escolherHorario(h)}
-                  style={{ cursor: 'pointer', textAlign: 'center', fontWeight: 700 }}
-                >
-                  {h}
-                </button>
-              ))}
-            </div>
-          )}
         </Etapa>
       )}
 
