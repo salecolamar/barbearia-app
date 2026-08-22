@@ -289,6 +289,12 @@ function AgendaTab() {
   const [agendamentos, setAgendamentos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [historico, setHistorico] = useState(null);
+  const [barbeiros, setBarbeiros] = useState([]);
+  const [bloqueando, setBloqueando] = useState(false);
+  const [horaBloqueio, setHoraBloqueio] = useState('12:00');
+  const [motivoBloqueio, setMotivoBloqueio] = useState('');
+  const [barbeiroBloqueioId, setBarbeiroBloqueioId] = useState('');
+  const [salvandoBloqueio, setSalvandoBloqueio] = useState(false);
   const dataStr = dateToStr(data);
 
   useEffect(() => {
@@ -307,13 +313,21 @@ function AgendaTab() {
       const mapa = new Map();
       snap.docs.forEach((d) => {
         const a = d.data();
-        if (a.status === 'cancelado' || !a.clienteTelefone) return;
+        if (a.status === 'cancelado' || a.tipo === 'bloqueio' || !a.clienteTelefone) return;
         const atual = mapa.get(a.clienteTelefone) || { total: 0, primeira: a.data };
         atual.total += 1;
         if (a.data < atual.primeira) atual.primeira = a.data;
         mapa.set(a.clienteTelefone, atual);
       });
       setHistorico(mapa);
+    });
+  }, []);
+
+  useEffect(() => {
+    getDocs(collection(db, 'barbeiros')).then((snap) => {
+      const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((b) => b.ativo !== false);
+      setBarbeiros(lista);
+      if (lista.length > 0) setBarbeiroBloqueioId(lista[0].id);
     });
   }, []);
 
@@ -331,6 +345,31 @@ function AgendaTab() {
     await deleteDoc(doc(db, 'agendamentos', id));
   }
 
+  async function criarBloqueio(e) {
+    e.preventDefault();
+    const barbeiro = barbeiros.find((b) => b.id === barbeiroBloqueioId);
+    if (!barbeiro || !horaBloqueio) return;
+    setSalvandoBloqueio(true);
+    await addDoc(collection(db, 'agendamentos'), {
+      tipo: 'bloqueio',
+      barbeiroId: barbeiro.id,
+      barbeiroNome: barbeiro.nome,
+      servicoDuracao: 30,
+      servicos: [],
+      valorTotal: 0,
+      data: dataStr,
+      hora: horaBloqueio,
+      clienteNome: motivoBloqueio.trim() || 'Bloqueado',
+      clienteTelefone: '',
+      status: 'confirmado',
+      fcmToken: null,
+      lembreteEnviado: true,
+    });
+    setSalvandoBloqueio(false);
+    setMotivoBloqueio('');
+    setBloqueando(false);
+  }
+
   return (
     <div style={{ paddingTop: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -345,74 +384,121 @@ function AgendaTab() {
         </button>
       </div>
 
+      {!bloqueando ? (
+        <button type="button" className="btn btn-secondary btn-block" style={{ marginBottom: 14 }} onClick={() => setBloqueando(true)}>
+          <Lock size={14} /> Bloquear horário
+        </button>
+      ) : (
+        <form onSubmit={criarBloqueio} className="card" style={{ marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {barbeiros.length > 1 && (
+            <select value={barbeiroBloqueioId} onChange={(e) => setBarbeiroBloqueioId(e.target.value)}>
+              {barbeiros.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.nome}
+                </option>
+              ))}
+            </select>
+          )}
+          <input type="time" step="1800" value={horaBloqueio} onChange={(e) => setHoraBloqueio(e.target.value)} required />
+          <input
+            placeholder="Motivo (opcional, ex: Almoço)"
+            value={motivoBloqueio}
+            onChange={(e) => setMotivoBloqueio(e.target.value)}
+          />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setBloqueando(false)}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={salvandoBloqueio || barbeiros.length === 0}>
+              {salvandoBloqueio ? 'Bloqueando…' : 'Confirmar'}
+            </button>
+          </div>
+        </form>
+      )}
+
       {carregando ? (
         <p style={{ color: 'var(--text-dim)' }}>Carregando…</p>
       ) : agendamentos.length === 0 ? (
         <p style={{ color: 'var(--text-dim)', textAlign: 'center', marginTop: 30 }}>Nenhum agendamento nesse dia.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {agendamentos.map((a) => (
-            <div key={a.id} className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          {agendamentos.map((a) =>
+            a.tipo === 'bloqueio' ? (
+              <div key={a.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--panel-2)' }}>
                 <div>
-                  <div style={{ fontWeight: 700 }}>
+                  <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Lock size={13} color="var(--text-dim)" />
                     {a.hora} · {a.clienteNome}
                   </div>
-                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>
-                    {a.barbeiroNome} · {a.clienteTelefone}
-                  </div>
-                  <HistoricoCliente historico={historico} telefone={a.clienteTelefone} />
-                  {a.servicos?.length > 0 && (
-                    <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>
-                      {a.servicos.map((s) => s.nome).join(', ')}
-                    </div>
-                  )}
+                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>{a.barbeiroNome}</div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <StatusBadge status={a.status} />
-                  {a.valorTotal > 0 && (
-                    <div style={{ marginTop: 6, fontWeight: 700, color: 'var(--gold)', fontSize: 14 }}>
-                      R$ {a.valorTotal.toFixed(2).replace('.', ',')}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {a.status === 'confirmado' && (
-                <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ flex: 1, padding: '10px 4px', fontSize: 12 }}
-                    onClick={() => mudarStatus(a.id, 'concluido')}
-                  >
-                    <UserCheck size={13} /> Presença
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ flex: 1, padding: '10px 4px', fontSize: 12, color: 'var(--danger)' }}
-                    onClick={() => mudarStatus(a.id, 'faltou')}
-                  >
-                    <UserX size={13} /> Faltou
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    style={{ flex: 1, padding: '10px 4px', fontSize: 12 }}
-                    onClick={() => mudarStatus(a.id, 'cancelado')}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              )}
-              {a.status !== 'confirmado' && (
-                <button type="button" className="btn btn-secondary" style={{ marginTop: 12, width: '100%' }} onClick={() => excluir(a.id)}>
-                  <Trash2 size={14} /> Excluir
+                <button type="button" className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => excluir(a.id)}>
+                  Desbloquear
                 </button>
-              )}
-            </div>
-          ))}
+              </div>
+            ) : (
+              <div key={a.id} className="card">
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>
+                      {a.hora} · {a.clienteNome}
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>
+                      {a.barbeiroNome} · {a.clienteTelefone}
+                    </div>
+                    <HistoricoCliente historico={historico} telefone={a.clienteTelefone} />
+                    {a.servicos?.length > 0 && (
+                      <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>
+                        {a.servicos.map((s) => s.nome).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <StatusBadge status={a.status} />
+                    {a.valorTotal > 0 && (
+                      <div style={{ marginTop: 6, fontWeight: 700, color: 'var(--gold)', fontSize: 14 }}>
+                        R$ {a.valorTotal.toFixed(2).replace('.', ',')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {a.status === 'confirmado' && (
+                  <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ flex: 1, padding: '10px 4px', fontSize: 12 }}
+                      onClick={() => mudarStatus(a.id, 'concluido')}
+                    >
+                      <UserCheck size={13} /> Presença
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ flex: 1, padding: '10px 4px', fontSize: 12, color: 'var(--danger)' }}
+                      onClick={() => mudarStatus(a.id, 'faltou')}
+                    >
+                      <UserX size={13} /> Faltou
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      style={{ flex: 1, padding: '10px 4px', fontSize: 12 }}
+                      onClick={() => mudarStatus(a.id, 'cancelado')}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+                {a.status !== 'confirmado' && (
+                  <button type="button" className="btn btn-secondary" style={{ marginTop: 12, width: '100%' }} onClick={() => excluir(a.id)}>
+                    <Trash2 size={14} /> Excluir
+                  </button>
+                )}
+              </div>
+            )
+          )}
         </div>
       )}
     </div>

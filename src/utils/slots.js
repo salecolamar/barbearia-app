@@ -128,7 +128,8 @@ export function getHorariosComStatus({
         const fimA = inicioA + (a.servicoDuracao || 30);
         return inicioSlot < fimA && inicioA < fimSlot;
       });
-      return { hora: slot, status: 'ocupado', clienteNome: ocupante?.clienteNome };
+      const nomeExibido = ocupante?.tipo === 'bloqueio' ? 'Indisponível' : ocupante?.clienteNome;
+      return { hora: slot, status: 'ocupado', clienteNome: nomeExibido };
     });
 }
 
