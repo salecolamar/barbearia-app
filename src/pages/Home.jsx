@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { AtSign, Calendar, Clock, MapPin, Megaphone, Phone } from 'lucide-react';
+import { AtSign, Calendar, Clock, Download, MapPin, Megaphone, Phone, Share, X } from 'lucide-react';
 import { db } from '../firebase';
 import { formatarHorarios } from '../utils/slots';
 import logo from '../assets/logo.jpg';
@@ -8,10 +8,26 @@ import logo from '../assets/logo.jpg';
 const TOQUES_PARA_PAINEL = 5;
 const JANELA_TOQUES_MS = 1500;
 
-export default function Home({ irParaAgendar }) {
+const jaInstalado =
+  typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone);
+
+export default function Home({ irParaAgendar, podeInstalarAndroid, onInstalarAndroid }) {
   const [config, setConfig] = useState(undefined);
+  const [avisoAndroid, setAvisoAndroid] = useState('');
+  const [tutorialIphone, setTutorialIphone] = useState(false);
   const toquesRef = useRef(0);
   const timeoutRef = useRef(null);
+
+  async function tocarInstalarAndroid() {
+    if (!podeInstalarAndroid) {
+      setAvisoAndroid('Não deu pra instalar automático por aqui. Tente pelo menu (⋮) do Chrome → "Adicionar à tela inicial".');
+      return;
+    }
+    const instalou = await onInstalarAndroid();
+    if (!instalou) {
+      setAvisoAndroid('Instalação cancelada. Toque no botão novamente quando quiser.');
+    }
+  }
 
   function tocarLogo() {
     toquesRef.current += 1;
@@ -112,21 +128,106 @@ export default function Home({ irParaAgendar }) {
       {(config.whatsapp || config.instagram) && (
         <div style={{ display: 'flex', gap: 8 }}>
           {config.whatsapp && (
-            <a href={whatsappUrl} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ flex: 1 }}>
-              <Phone size={16} /> WhatsApp
+            <a href={whatsappUrl} target="_blank" rel="noreferrer" className="btn btn-secondary home-mini-btn" style={{ flex: 1 }}>
+              <Phone size={14} /> WhatsApp
             </a>
           )}
           {config.instagram && (
-            <a href={config.instagram} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ flex: 1 }}>
-              <AtSign size={16} /> Instagram
+            <a href={config.instagram} target="_blank" rel="noreferrer" className="btn btn-secondary home-mini-btn" style={{ flex: 1 }}>
+              <AtSign size={14} /> Instagram
             </a>
           )}
+        </div>
+      )}
+
+      {!jaInstalado && (
+        <div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="btn btn-secondary home-mini-btn" style={{ flex: 1 }} onClick={tocarInstalarAndroid}>
+              <Download size={14} /> Instalar (Android)
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary home-mini-btn"
+              style={{ flex: 1 }}
+              onClick={() => setTutorialIphone(true)}
+            >
+              <Share size={14} /> Instalar (iPhone)
+            </button>
+          </div>
+          {avisoAndroid && <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>{avisoAndroid}</p>}
         </div>
       )}
 
       <button type="button" className="btn btn-primary btn-block" onClick={irParaAgendar}>
         <Calendar size={16} /> Agendar horário
       </button>
+
+      {tutorialIphone && <TutorialIphone onFechar={() => setTutorialIphone(false)} />}
+    </div>
+  );
+}
+
+function TutorialIphone({ onFechar }) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.7)',
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        zIndex: 50,
+      }}
+      onClick={onFechar}
+    >
+      <div
+        className="card"
+        style={{ width: '100%', maxWidth: 480, borderRadius: '20px 20px 0 0', padding: '20px 20px calc(20px + env(safe-area-inset-bottom))' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <h2 style={{ fontSize: 16 }}>Instalar no iPhone</h2>
+          <button type="button" onClick={onFechar} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
+            <X size={20} />
+          </button>
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 14 }}>
+          Precisa ser pelo <strong>Safari</strong> (não funciona no Chrome do iPhone). Siga os passos:
+        </p>
+        <PassoTutorial numero={1} texto='Toque no ícone de compartilhar (o quadrado com uma seta ↑) na barra do Safari.' />
+        <PassoTutorial numero={2} texto='Role a lista e toque em "Adicionar à Tela de Início".' />
+        <PassoTutorial numero={3} texto='Toque em "Adicionar" no canto superior direito.' />
+        <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 6 }} onClick={onFechar}>
+          Entendi
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PassoTutorial({ numero, texto }) {
+  return (
+    <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'flex-start' }}>
+      <span
+        style={{
+          flexShrink: 0,
+          width: 22,
+          height: 22,
+          borderRadius: '50%',
+          background: 'var(--gold)',
+          color: '#1a1400',
+          fontSize: 12,
+          fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {numero}
+      </span>
+      <p style={{ fontSize: 14, lineHeight: 1.4 }}>{texto}</p>
     </div>
   );
 }

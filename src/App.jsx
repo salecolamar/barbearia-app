@@ -12,11 +12,29 @@ const forcarNovoCliente = new URLSearchParams(window.location.search).get('novo'
 export default function App() {
   const [authOk, setAuthOk] = useState(false);
   const [aba, setAba] = useState(abaInicial);
+  const [promptInstalacao, setPromptInstalacao] = useState(null);
   const isAdmin = window.location.pathname.startsWith('/admin');
 
   useEffect(() => {
     authReady.then(() => setAuthOk(true));
   }, []);
+
+  useEffect(() => {
+    function aoDisponibilizar(e) {
+      e.preventDefault();
+      setPromptInstalacao(e);
+    }
+    window.addEventListener('beforeinstallprompt', aoDisponibilizar);
+    return () => window.removeEventListener('beforeinstallprompt', aoDisponibilizar);
+  }, []);
+
+  async function instalarAndroid() {
+    if (!promptInstalacao) return false;
+    promptInstalacao.prompt();
+    const { outcome } = await promptInstalacao.userChoice;
+    setPromptInstalacao(null);
+    return outcome === 'accepted';
+  }
 
   if (!authOk) {
     return (
@@ -36,7 +54,13 @@ export default function App() {
       </header>
 
       <main style={{ flex: 1, padding: '0 16px 90px' }}>
-        {aba === 'inicio' && <HomePage irParaAgendar={() => setAba('agendar')} />}
+        {aba === 'inicio' && (
+          <HomePage
+            irParaAgendar={() => setAba('agendar')}
+            podeInstalarAndroid={!!promptInstalacao}
+            onInstalarAndroid={instalarAndroid}
+          />
+        )}
         {aba === 'agendar' && <Booking forcarCadastro={forcarNovoCliente} />}
         {aba === 'meus' && <MyAppointments />}
       </main>

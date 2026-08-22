@@ -151,17 +151,17 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
 }
 
 .home-stack {
-  gap: 8px;
+  gap: 7px;
 }
 
 .home-hero {
-  padding: 18px 20px;
+  padding: 14px 20px;
 }
 
 .home-logo {
-  width: 120px;
-  height: 120px;
-  margin: 0 auto 12px;
+  width: 104px;
+  height: 104px;
+  margin: 0 auto 10px;
 }
 
 .home-card {
@@ -176,21 +176,26 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
   font-size: 12px;
 }
 
+.home-mini-btn {
+  padding: 9px 4px;
+  font-size: 12px;
+}
+
 /* Telas baixas (ex: iPhone SE): encolhe só o necessário pra caber sem rolar. */
 @media (max-height: 700px) {
   .home-stack {
-    gap: 4px;
+    gap: 2px;
   }
   .home-hero {
-    padding: 8px 20px;
+    padding: 6px 20px;
   }
   .home-logo {
-    width: 72px;
-    height: 72px;
+    width: 64px;
+    height: 64px;
     margin: 0 auto 4px;
   }
   .home-card {
-    padding: 6px 14px;
+    padding: 4px 12px;
   }
   .home-recado {
     padding: 6px 10px;
@@ -201,5 +206,9 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+  .home-mini-btn {
+    padding: 6px 4px;
+    font-size: 11px;
   }
 }
