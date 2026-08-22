@@ -14,6 +14,30 @@ export function strToDate(str) {
   return new Date(y, m - 1, d);
 }
 
+// Segunda-feira da semana que contém a data (semana começa na segunda).
+export function inicioSemana(date) {
+  const d = new Date(date);
+  const dia = d.getDay();
+  const offset = dia === 0 ? -6 : 1 - dia;
+  d.setDate(d.getDate() + offset);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+export function fimSemana(date) {
+  const d = inicioSemana(date);
+  d.setDate(d.getDate() + 6);
+  return d;
+}
+
+export function inicioMes(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+export function fimMes(date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+}
+
 export function timeToMinutes(time) {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;

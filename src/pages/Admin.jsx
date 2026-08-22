@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   addDoc,
   arrayUnion,
@@ -6,6 +6,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   query,
   setDoc,
@@ -13,6 +14,7 @@ import {
   where,
 } from 'firebase/firestore';
 import {
+  BarChart3,
   Bell,
   Calendar,
   CalendarPlus,
@@ -22,17 +24,21 @@ import {
   Lock,
   Pencil,
   Plus,
+  Repeat,
   Scissors,
   Settings,
+  Sparkles,
   Store,
   Trash2,
+  TrendingUp,
   UserCheck,
   Users,
+  UserX,
   Wallet,
 } from 'lucide-react';
 import { db } from '../firebase';
 import { pedirTokenNotificacao } from '../notifications';
-import { DIAS_SEMANA, dateToStr } from '../utils/slots';
+import { DIAS_SEMANA, DIAS_SEMANA_ABREV, dateToStr, fimMes, fimSemana, inicioMes, inicioSemana } from '../utils/slots';
 
 const SESSION_KEY = 'barbearia:admin-ok';
 const NOTIF_KEY = 'barbearia:admin-notif-ok';
@@ -282,6 +288,7 @@ function AgendaTab() {
   const [data, setData] = useState(new Date());
   const [agendamentos, setAgendamentos] = useState([]);
   const [carregando, setCarregando] = useState(true);
+  const [historico, setHistorico] = useState(null);
   const dataStr = dateToStr(data);
 
   useEffect(() => {
@@ -294,6 +301,21 @@ function AgendaTab() {
     });
     return unsub;
   }, [dataStr]);
+
+  useEffect(() => {
+    getDocs(collection(db, 'agendamentos')).then((snap) => {
+      const mapa = new Map();
+      snap.docs.forEach((d) => {
+        const a = d.data();
+        if (a.status === 'cancelado' || !a.clienteTelefone) return;
+        const atual = mapa.get(a.clienteTelefone) || { total: 0, primeira: a.data };
+        atual.total += 1;
+        if (a.data < atual.primeira) atual.primeira = a.data;
+        mapa.set(a.clienteTelefone, atual);
+      });
+      setHistorico(mapa);
+    });
+  }, []);
 
   function mudarDia(delta) {
     const nova = new Date(data);
@@ -339,6 +361,7 @@ function AgendaTab() {
                   <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>
                     {a.barbeiroNome} · {a.clienteTelefone}
                   </div>
+                  <HistoricoCliente historico={historico} telefone={a.clienteTelefone} />
                   {a.servicos?.length > 0 && (
                     <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>
                       {a.servicos.map((s) => s.nome).join(', ')}
@@ -356,11 +379,29 @@ function AgendaTab() {
               </div>
 
               {a.status === 'confirmado' && (
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                  <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => mudarStatus(a.id, 'concluido')}>
-                    <UserCheck size={14} /> Confirmar presença
+                <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ flex: 1, padding: '10px 4px', fontSize: 12 }}
+                    onClick={() => mudarStatus(a.id, 'concluido')}
+                  >
+                    <UserCheck size={13} /> Presença
                   </button>
-                  <button type="button" className="btn btn-danger" style={{ flex: 1 }} onClick={() => mudarStatus(a.id, 'cancelado')}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ flex: 1, padding: '10px 4px', fontSize: 12, color: 'var(--danger)' }}
+                    onClick={() => mudarStatus(a.id, 'faltou')}
+                  >
+                    <UserX size={13} /> Faltou
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    style={{ flex: 1, padding: '10px 4px', fontSize: 12 }}
+                    onClick={() => mudarStatus(a.id, 'cancelado')}
+                  >
                     Cancelar
                   </button>
                 </div>
@@ -378,8 +419,27 @@ function AgendaTab() {
   );
 }
 
+function HistoricoCliente({ historico, telefone }) {
+  if (!historico) return null;
+  const info = historico.get(telefone);
+  if (!info || info.total <= 1) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--gold)', marginTop: 4 }}>
+        <Sparkles size={12} /> Cliente novo
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--gold)', marginTop: 4 }}>
+      <Repeat size={12} /> {info.total}ª visita · cliente desde{' '}
+      {new Date(`${info.primeira}T00:00:00`).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
+    </div>
+  );
+}
+
 function StatusBadge({ status }) {
   if (status === 'cancelado') return <span className="chip chip-danger">Cancelado</span>;
+  if (status === 'faltou') return <span className="chip chip-danger">Faltou</span>;
   if (status === 'concluido') return <span className="chip chip-success">Compareceu</span>;
   return <span className="chip chip-gold">Confirmado</span>;
 }
@@ -387,57 +447,187 @@ function StatusBadge({ status }) {
 // ---------- Financeiro ----------
 
 function FinanceiroTab() {
+  const [periodo, setPeriodo] = useState('dia');
   const [data, setData] = useState(new Date());
   const [agendamentos, setAgendamentos] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const dataStr = dateToStr(data);
+
+  const intervalo = useMemo(() => {
+    if (periodo === 'semana') return { inicio: inicioSemana(data), fim: fimSemana(data) };
+    if (periodo === 'mes') return { inicio: inicioMes(data), fim: fimMes(data) };
+    return { inicio: data, fim: data };
+  }, [periodo, data]);
+
+  const inicioStr = dateToStr(intervalo.inicio);
+  const fimStr = dateToStr(intervalo.fim);
 
   useEffect(() => {
     setCarregando(true);
-    const q = query(collection(db, 'agendamentos'), where('data', '==', dataStr), where('status', '==', 'concluido'));
+    const q =
+      periodo === 'dia'
+        ? query(collection(db, 'agendamentos'), where('data', '==', inicioStr))
+        : query(collection(db, 'agendamentos'), where('data', '>=', inicioStr), where('data', '<=', fimStr));
     const unsub = onSnapshot(q, (snap) => {
-      const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.hora.localeCompare(b.hora));
+      const lista = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((a) => a.status === 'concluido')
+        .sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora));
       setAgendamentos(lista);
       setCarregando(false);
     });
     return unsub;
-  }, [dataStr]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodo, inicioStr, fimStr]);
 
-  function mudarDia(delta) {
+  function mudarPeriodo(delta) {
     const nova = new Date(data);
-    nova.setDate(nova.getDate() + delta);
+    if (periodo === 'dia') nova.setDate(nova.getDate() + delta);
+    else if (periodo === 'semana') nova.setDate(nova.getDate() + delta * 7);
+    else nova.setMonth(nova.getMonth() + delta);
     setData(nova);
   }
 
   const total = agendamentos.reduce((soma, a) => soma + (a.valorTotal || 0), 0);
 
+  const porData = useMemo(() => {
+    const mapa = new Map();
+    agendamentos.forEach((a) => mapa.set(a.data, (mapa.get(a.data) || 0) + (a.valorTotal || 0)));
+    return mapa;
+  }, [agendamentos]);
+
+  const barras = useMemo(() => {
+    if (periodo === 'dia') return null;
+    if (periodo === 'semana') {
+      const lista = [];
+      for (let d = new Date(intervalo.inicio); d <= intervalo.fim; d.setDate(d.getDate() + 1)) {
+        lista.push({ label: DIAS_SEMANA_ABREV[d.getDay()], valor: porData.get(dateToStr(d)) || 0 });
+      }
+      return lista;
+    }
+    // mês: agrupa em blocos de 7 dias
+    const lista = [];
+    let cursor = new Date(intervalo.inicio);
+    while (cursor <= intervalo.fim) {
+      const inicioBloco = new Date(cursor);
+      const fimBloco = new Date(Math.min(new Date(cursor).setDate(cursor.getDate() + 6), intervalo.fim.getTime()));
+      let soma = 0;
+      for (let d = new Date(inicioBloco); d <= fimBloco; d.setDate(d.getDate() + 1)) {
+        soma += porData.get(dateToStr(d)) || 0;
+      }
+      lista.push({ label: `${inicioBloco.getDate()}-${fimBloco.getDate()}`, valor: soma });
+      cursor = new Date(fimBloco);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return lista;
+  }, [periodo, intervalo, porData]);
+
+  const maxBarra = barras ? Math.max(1, ...barras.map((b) => b.valor)) : 1;
+
+  const servicosRanking = useMemo(() => {
+    const contagem = new Map();
+    agendamentos.forEach((a) => {
+      (a.servicos || []).forEach((s) => contagem.set(s.nome, (contagem.get(s.nome) || 0) + 1));
+    });
+    return [...contagem.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+  }, [agendamentos]);
+
+  const rotuloDataBruto =
+    periodo === 'dia'
+      ? data.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' })
+      : periodo === 'semana'
+        ? `${intervalo.inicio.getDate()} a ${intervalo.fim.getDate()} de ${intervalo.fim.toLocaleDateString('pt-BR', { month: 'long' })}`
+        : data.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const rotuloData = rotuloDataBruto.charAt(0).toUpperCase() + rotuloDataBruto.slice(1);
+
   return (
     <div style={{ paddingTop: 8 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+        {[
+          ['dia', 'Dia'],
+          ['semana', 'Semana'],
+          ['mes', 'Mês'],
+        ].map(([valor, label]) => (
+          <button
+            key={valor}
+            type="button"
+            onClick={() => setPeriodo(valor)}
+            className={periodo === valor ? 'btn btn-primary' : 'btn btn-secondary'}
+            style={{ flex: 1, padding: '8px 0', fontSize: 13 }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <button type="button" onClick={() => mudarDia(-1)} className="btn btn-secondary" style={{ padding: 8 }}>
+        <button type="button" onClick={() => mudarPeriodo(-1)} className="btn btn-secondary" style={{ padding: 8 }}>
           <ChevronLeft size={18} />
         </button>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontWeight: 700 }}>{data.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' })}</div>
+          <div style={{ fontWeight: 700 }}>{rotuloData}</div>
         </div>
-        <button type="button" onClick={() => mudarDia(1)} className="btn btn-secondary" style={{ padding: 8 }}>
+        <button type="button" onClick={() => mudarPeriodo(1)} className="btn btn-secondary" style={{ padding: 8 }}>
           <ChevronRight size={18} />
         </button>
       </div>
 
       <div className="card" style={{ textAlign: 'center', marginBottom: 14, padding: '18px 16px' }}>
-        <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>Total recebido no dia</p>
+        <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>Total recebido</p>
         <p style={{ fontSize: 28, fontWeight: 800, color: 'var(--gold)' }}>R$ {total.toFixed(2).replace('.', ',')}</p>
         <p style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
           {agendamentos.length} atendimento{agendamentos.length !== 1 ? 's' : ''} com presença confirmada
         </p>
       </div>
 
+      {barras && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, color: 'var(--gold)', fontSize: 13, fontWeight: 700 }}>
+            <BarChart3 size={15} /> Faturamento por {periodo === 'semana' ? 'dia' : 'período'}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 110 }}>
+            {barras.map((b) => (
+              <div key={b.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%' }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', width: '100%' }}>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: `${Math.max(3, (b.valor / maxBarra) * 100)}%`,
+                      background: b.valor > 0 ? 'var(--gold)' : 'var(--border)',
+                      borderRadius: '4px 4px 0 0',
+                    }}
+                    title={`R$ ${b.valor.toFixed(2).replace('.', ',')}`}
+                  />
+                </div>
+                <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{b.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {servicosRanking.length > 0 && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, color: 'var(--gold)', fontSize: 13, fontWeight: 700 }}>
+            <TrendingUp size={15} /> Serviços mais pedidos
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {servicosRanking.map(([nome, qtd], i) => (
+              <div key={nome} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                <span>
+                  {i + 1}º {nome}
+                </span>
+                <span style={{ color: 'var(--text-dim)' }}>{qtd}x</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {carregando ? (
         <p style={{ color: 'var(--text-dim)' }}>Carregando…</p>
       ) : agendamentos.length === 0 ? (
         <p style={{ color: 'var(--text-dim)', textAlign: 'center', marginTop: 20 }}>
-          Nenhum atendimento com presença confirmada nesse dia ainda.
+          Nenhum atendimento com presença confirmada nesse período ainda.
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -445,6 +635,7 @@ function FinanceiroTab() {
             <div key={a.id} className="card" style={{ display: 'flex', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontWeight: 700 }}>
+                  {periodo !== 'dia' && `${a.data.slice(8, 10)}/${a.data.slice(5, 7)} · `}
                   {a.hora} · {a.clienteNome}
                 </div>
                 {a.servicos?.length > 0 && (

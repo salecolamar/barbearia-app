@@ -182,6 +182,7 @@ export default function MyAppointments() {
 
 function StatusChip({ status, passado }) {
   if (status === 'cancelado') return <span className="chip chip-danger">Cancelado</span>;
+  if (status === 'faltou') return <span className="chip chip-danger">Não compareceu</span>;
   if (status === 'concluido' || passado) return <span className="chip" style={{ background: 'var(--panel-2)', color: 'var(--text-dim)' }}>Concluído</span>;
   return <span className="chip chip-gold">Confirmado</span>;
 }
