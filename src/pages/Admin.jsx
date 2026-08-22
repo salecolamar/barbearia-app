@@ -917,6 +917,7 @@ function HorariosTab({ config, setConfig }) {
 
 function PerfilTab({ config, setConfig }) {
   const [nome, setNome] = useState(config.nomeBarbearia || '');
+  const [recado, setRecado] = useState(config.recado || '');
   const [descricao, setDescricao] = useState(config.descricao || '');
   const [endereco, setEndereco] = useState(config.endereco || '');
   const [whatsapp, setWhatsapp] = useState(config.whatsapp || '');
@@ -929,6 +930,7 @@ function PerfilTab({ config, setConfig }) {
     setSalvando(true);
     const dados = {
       nomeBarbearia: nome.trim() || 'Minha Barbearia',
+      recado: recado.trim(),
       descricao: descricao.trim(),
       endereco: endereco.trim(),
       whatsapp: whatsapp.trim(),
@@ -950,6 +952,18 @@ function PerfilTab({ config, setConfig }) {
       <form onSubmit={salvar} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <label style={labelStyle}>Nome da barbearia</label>
         <input value={nome} onChange={(e) => { setNome(e.target.value); setSalvo(false); }} placeholder="Nome da barbearia" />
+
+        <label style={labelStyle}>Recado (opcional)</label>
+        <textarea
+          value={recado}
+          onChange={(e) => { setRecado(e.target.value); setSalvo(false); }}
+          placeholder="Ex: Fechado no feriado de 25/12. Deixe em branco pra não mostrar nada."
+          rows={2}
+          style={{ resize: 'vertical' }}
+        />
+        <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: -6 }}>
+          Só aparece na tela inicial do cliente enquanto tiver algo escrito aqui.
+        </p>
 
         <label style={labelStyle}>Apresentação (opcional)</label>
         <textarea

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { AtSign, Calendar, Clock, MapPin, Phone } from 'lucide-react';
+import { AtSign, Calendar, Clock, MapPin, Megaphone, Phone } from 'lucide-react';
 import { db } from '../firebase';
 import { formatarHorarios } from '../utils/slots';
 import logo from '../assets/logo.jpg';
@@ -64,6 +64,23 @@ export default function Home({ irParaAgendar }) {
           <p style={{ color: 'var(--text-dim)', fontSize: 14, marginTop: 6 }}>{config.descricao}</p>
         )}
       </div>
+
+      {config.recado && (
+        <div
+          className="home-recado"
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 7,
+            background: 'rgba(201,162,39,0.1)',
+            border: '1px solid var(--gold)',
+            borderRadius: 'var(--radius)',
+          }}
+        >
+          <Megaphone size={14} color="var(--gold)" style={{ flexShrink: 0, marginTop: 2 }} />
+          <p style={{ color: 'var(--text)', lineHeight: 1.35 }}>{config.recado}</p>
+        </div>
+      )}
 
       {config.horarios && (
         <div className="card home-card">

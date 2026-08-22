@@ -151,7 +151,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
 }
 
 .home-stack {
-  gap: 10px;
+  gap: 8px;
 }
 
 .home-hero {
@@ -168,20 +168,38 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
   padding: 16px;
 }
 
+.home-recado {
+  padding: 8px 12px;
+}
+
+.home-recado p {
+  font-size: 12px;
+}
+
 /* Telas baixas (ex: iPhone SE): encolhe só o necessário pra caber sem rolar. */
 @media (max-height: 700px) {
   .home-stack {
-    gap: 6px;
+    gap: 4px;
   }
   .home-hero {
-    padding: 10px 20px;
+    padding: 8px 20px;
   }
   .home-logo {
     width: 72px;
     height: 72px;
-    margin: 0 auto 6px;
+    margin: 0 auto 4px;
   }
   .home-card {
-    padding: 8px 16px;
+    padding: 6px 14px;
+  }
+  .home-recado {
+    padding: 6px 10px;
+  }
+  .home-recado p {
+    font-size: 11px;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }
