@@ -60,9 +60,11 @@ function barbeiroLivre(barbeiroId, inicioSlot, fimSlot, agendamentosDoDia) {
   });
 }
 
-// Horários livres considerando todos os barbeiros ativos: um horário aparece
-// como disponível se pelo menos um barbeiro estiver livre nele.
-export function getHorariosDisponiveisGeral({
+// Todos os horários do dia (dentro do funcionamento), cada um com um status:
+// 'livre' (pode marcar), 'ocupado' (já tem cliente, mostra o nome) ou
+// 'passado' (já era hoje). Um horário só fica "ocupado" se TODOS os
+// barbeiros ativos já tiverem algo marcado nele.
+export function getHorariosComStatus({
   dateStr,
   duracaoMin,
   horariosConfig,
@@ -81,15 +83,29 @@ export function getHorariosDisponiveisGeral({
   const isHoje = dateStr === dateToStr(agora);
   const minutosAgora = agora.getHours() * 60 + agora.getMinutes() + bufferMin;
 
-  return todos.filter((slot) => {
-    const inicioSlot = timeToMinutes(slot);
-    const fimSlot = inicioSlot + duracaoMin;
+  const ocupadosValidos = agendamentosDoDia.filter((a) => a.status !== 'cancelado');
 
-    if (fimSlot > fechamento) return false;
-    if (isHoje && inicioSlot < minutosAgora) return false;
+  return todos
+    .filter((slot) => timeToMinutes(slot) + duracaoMin <= fechamento)
+    .map((slot) => {
+      const inicioSlot = timeToMinutes(slot);
+      const fimSlot = inicioSlot + duracaoMin;
 
-    return barbeiros.some((b) => barbeiroLivre(b.id, inicioSlot, fimSlot, agendamentosDoDia));
-  });
+      if (isHoje && inicioSlot < minutosAgora) {
+        return { hora: slot, status: 'passado' };
+      }
+
+      if (barbeiros.some((b) => barbeiroLivre(b.id, inicioSlot, fimSlot, agendamentosDoDia))) {
+        return { hora: slot, status: 'livre' };
+      }
+
+      const ocupante = ocupadosValidos.find((a) => {
+        const inicioA = timeToMinutes(a.hora);
+        const fimA = inicioA + (a.servicoDuracao || 30);
+        return inicioSlot < fimA && inicioA < fimSlot;
+      });
+      return { hora: slot, status: 'ocupado', clienteNome: ocupante?.clienteNome };
+    });
 }
 
 // Escolhe o primeiro barbeiro ativo livre em um horário específico.

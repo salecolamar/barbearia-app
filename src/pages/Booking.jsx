@@ -4,7 +4,7 @@ import { Bell, Check, ChevronLeft, Clock, Scissors, User } from 'lucide-react';
 import { db } from '../firebase';
 import { pedirTokenNotificacao } from '../notifications';
 import { getClienteSalvo, salvarCliente } from '../utils/storage';
-import { dateToStr, escolherBarbeiroDisponivel, getHorariosDisponiveisGeral, proximosDias, strToDate } from '../utils/slots';
+import { dateToStr, escolherBarbeiroDisponivel, getHorariosComStatus, proximosDias, strToDate } from '../utils/slots';
 import { calcularMelhorPreco } from '../utils/combos';
 import DayStrip from '../components/DayStrip';
 import TimeSlotGrid from '../components/TimeSlotGrid';
@@ -26,7 +26,7 @@ export default function Booking({ forcarCadastro = false }) {
   const dias = useMemo(() => proximosDias(21), []);
   const [dataStr, setDataStr] = useState(dateToStr(new Date()));
   const [hora, setHora] = useState(null);
-  const [horariosDisponiveis, setHorariosDisponiveis] = useState([]);
+  const [horarios, setHorarios] = useState([]);
   const [carregandoHorarios, setCarregandoHorarios] = useState(false);
 
   const [salvando, setSalvando] = useState(false);
@@ -68,7 +68,7 @@ export default function Booking({ forcarCadastro = false }) {
     setCarregandoHorarios(true);
     const snap = await getDocs(query(collection(db, 'agendamentos'), where('data', '==', str)));
     const agendamentosDoDia = snap.docs.map((d) => d.data());
-    const disponiveis = getHorariosDisponiveisGeral({
+    const lista = getHorariosComStatus({
       dateStr: str,
       duracaoMin: config.intervaloMin || 30,
       horariosConfig: config.horarios,
@@ -76,7 +76,7 @@ export default function Booking({ forcarCadastro = false }) {
       barbeiros,
       agendamentosDoDia,
     });
-    setHorariosDisponiveis(disponiveis);
+    setHorarios(lista);
     setCarregandoHorarios(false);
   }
 
@@ -240,7 +240,7 @@ export default function Booking({ forcarCadastro = false }) {
           {erro && <p style={{ color: 'var(--danger)', fontSize: 13, marginTop: -4 }}>{erro}</p>}
 
           <div style={{ marginTop: 4 }}>
-            <TimeSlotGrid horarios={horariosDisponiveis} carregando={carregandoHorarios} onSelect={escolherHorario} />
+            <TimeSlotGrid horarios={horarios} carregando={carregandoHorarios} onSelect={escolherHorario} />
           </div>
         </Etapa>
       )}
