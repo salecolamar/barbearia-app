@@ -25,16 +25,19 @@ import {
   CreditCard,
   Lock,
   Pencil,
+  Phone,
   Plus,
   QrCode,
   Repeat,
   Scissors,
+  Search,
   Settings,
   Sparkles,
   Store,
   Trash2,
   TrendingUp,
   UserCheck,
+  UserRound,
   Users,
   UserX,
   Wallet,
@@ -192,6 +195,7 @@ function Dashboard({ config, setConfig }) {
       <div style={{ padding: '0 16px' }}>
         {aba === 'agendados' && <AgendaTab />}
         {aba === 'financeiro' && <FinanceiroTab />}
+        {aba === 'clientes' && <ClientesTab />}
         {aba === 'barbeiros' && <BarbeirosTab />}
         {aba === 'servicos' && <ServicosTab />}
         {aba === 'horarios' && <HorariosTab config={config} setConfig={setConfig} />}
@@ -213,6 +217,7 @@ function Dashboard({ config, setConfig }) {
       >
         <TabBtn ativo={aba === 'agendados'} onClick={() => setAba('agendados')} icone={<Calendar size={19} />} label="Agendados" />
         <TabBtn ativo={aba === 'financeiro'} onClick={() => setAba('financeiro')} icone={<Wallet size={19} />} label="Financeiro" />
+        <TabBtn ativo={aba === 'clientes'} onClick={() => setAba('clientes')} icone={<UserRound size={19} />} label="Clientes" />
         <TabBtn ativo={aba === 'barbeiros'} onClick={() => setAba('barbeiros')} icone={<Users size={19} />} label="Barbeiros" />
         <TabBtn ativo={aba === 'servicos'} onClick={() => setAba('servicos')} icone={<Scissors size={19} />} label="Serviços" />
         <TabBtn ativo={aba === 'horarios'} onClick={() => setAba('horarios')} icone={<Settings size={19} />} label="Horários" />
@@ -816,6 +821,120 @@ function FormaPagamentoIcone({ forma }) {
       }}
     >
       <Icone size={16} />
+    </div>
+  );
+}
+
+// ---------- Clientes ----------
+
+function ClientesTab() {
+  const [clientes, setClientes] = useState(null);
+  const [busca, setBusca] = useState('');
+
+  useEffect(() => {
+    getDocs(collection(db, 'agendamentos')).then((snap) => {
+      const mapa = new Map();
+      snap.docs
+        .map((d) => d.data())
+        .filter((a) => a.tipo !== 'bloqueio' && a.clienteTelefone)
+        .sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora))
+        .forEach((a) => {
+          const atual = mapa.get(a.clienteTelefone) || {
+            nome: a.clienteNome,
+            telefone: a.clienteTelefone,
+            visitas: 0,
+            gasto: 0,
+            primeira: a.data,
+            ultima: a.data,
+          };
+          atual.nome = a.clienteNome || atual.nome;
+          if (a.status !== 'cancelado') atual.visitas += 1;
+          if (a.status === 'concluido') atual.gasto += a.valorTotal || 0;
+          if (a.data < atual.primeira) atual.primeira = a.data;
+          if (a.data > atual.ultima) atual.ultima = a.data;
+          mapa.set(a.clienteTelefone, atual);
+        });
+      const lista = [...mapa.values()].sort((a, b) => b.ultima.localeCompare(a.ultima));
+      setClientes(lista);
+    });
+  }, []);
+
+  const filtrados = useMemo(() => {
+    if (!clientes) return [];
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return clientes;
+    return clientes.filter(
+      (c) => c.nome?.toLowerCase().includes(termo) || c.telefone.includes(termo)
+    );
+  }, [clientes, busca]);
+
+  return (
+    <div style={{ paddingTop: 8 }}>
+      <div style={{ position: 'relative', marginBottom: 14 }}>
+        <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+        <input
+          placeholder="Buscar por nome ou telefone"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          style={{ paddingLeft: 36 }}
+        />
+      </div>
+
+      {clientes === null ? (
+        <p style={{ color: 'var(--text-dim)' }}>Carregando…</p>
+      ) : filtrados.length === 0 ? (
+        <p style={{ color: 'var(--text-dim)', textAlign: 'center', marginTop: 30 }}>
+          {clientes.length === 0 ? 'Nenhum cliente cadastrado ainda.' : 'Nenhum cliente encontrado.'}
+        </p>
+      ) : (
+        <>
+          <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>
+            {filtrados.length} cliente{filtrados.length !== 1 ? 's' : ''}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {filtrados.map((c) => (
+              <div key={c.telefone} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: '50%',
+                    background: 'var(--panel-2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    color: 'var(--gold)',
+                    fontWeight: 700,
+                  }}
+                >
+                  {(c.nome || '?').charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700 }}>{c.nome || 'Sem nome'}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>{c.telefone}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--gold)', marginTop: 4 }}>
+                    {c.visitas <= 1 ? <Sparkles size={12} /> : <Repeat size={12} />}
+                    {c.visitas <= 1
+                      ? 'Cliente novo'
+                      : `${c.visitas} visitas · cliente desde ${new Date(`${c.primeira}T00:00:00`).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}`}
+                  </div>
+                </div>
+                <a
+                  href={`https://wa.me/${c.telefone.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-secondary"
+                  style={{ padding: 10, flexShrink: 0 }}
+                  title="Abrir WhatsApp"
+                >
+                  <Phone size={16} />
+                </a>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
