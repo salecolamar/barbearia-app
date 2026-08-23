@@ -460,6 +460,9 @@ function AgendaTab() {
                         R$ {a.valorTotal.toFixed(2).replace('.', ',')}
                       </div>
                     )}
+                    {a.formaPagamento && (
+                      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{a.formaPagamento}</div>
+                    )}
                   </div>
                 </div>
 

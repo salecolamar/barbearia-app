@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
-import { Bell, Check, ChevronLeft, Clock, Scissors, User } from 'lucide-react';
+import { Banknote, Bell, Check, ChevronLeft, Clock, CreditCard, QrCode, Scissors, User, Wallet } from 'lucide-react';
 import { db } from '../firebase';
 import { pedirTokenNotificacao } from '../notifications';
 import { getClienteSalvo, salvarCliente } from '../utils/storage';
@@ -34,6 +34,7 @@ export default function Booking({ forcarCadastro = false }) {
   const [lembreteAtivo, setLembreteAtivo] = useState(false);
   const [agendamentoId, setAgendamentoId] = useState(null);
   const [barbeiroEscolhido, setBarbeiroEscolhido] = useState(null);
+  const [formaPagamento, setFormaPagamento] = useState('');
 
   useEffect(() => {
     async function carregar() {
@@ -149,6 +150,10 @@ export default function Booking({ forcarCadastro = false }) {
   }
 
   async function confirmarAgendamento() {
+    if (!formaPagamento) {
+      setErro('Escolha a forma de pagamento.');
+      return;
+    }
     setSalvando(true);
     setErro('');
     try {
@@ -160,6 +165,7 @@ export default function Booking({ forcarCadastro = false }) {
         servicos: servicos.filter((s) => servicosSelecionadosIds.includes(s.id)).map((s) => ({ id: s.id, nome: s.nome })),
         valorItens: resumoServicos.itens,
         valorTotal: resumoServicos.total,
+        formaPagamento,
         data: dataStr,
         hora,
         clienteNome: nome.trim(),
@@ -201,6 +207,7 @@ export default function Booking({ forcarCadastro = false }) {
     setServicosSelecionadosIds([]);
     setAgendamentoId(null);
     setLembreteAtivo(false);
+    setFormaPagamento('');
     setPasso('horario');
   }
 
@@ -302,8 +309,16 @@ export default function Booking({ forcarCadastro = false }) {
       {passo === 'revisao' && (
         <Etapa titulo="Confirmar agendamento" icone={<Check size={18} />}>
           <div className="card">
-            <Resumo nome={nome} dataStr={dataStr} hora={hora} resumoServicos={calcularResumoServicos()} />
+            <Resumo nome={nome} dataStr={dataStr} hora={hora} resumoServicos={calcularResumoServicos()} formaPagamento={formaPagamento} />
           </div>
+
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)', display: 'block', marginBottom: 8 }}>
+              Forma de pagamento
+            </span>
+            <FormaPagamentoSelect selecionado={formaPagamento} onSelect={setFormaPagamento} />
+          </div>
+
           {erro && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{erro}</p>}
           <button type="button" className="btn btn-primary btn-block" onClick={confirmarAgendamento} disabled={salvando}>
             {salvando ? 'Confirmando…' : 'Confirmar agendamento'}
@@ -331,7 +346,7 @@ export default function Booking({ forcarCadastro = false }) {
           <p style={{ color: 'var(--text-dim)', marginTop: 6 }}>Te esperamos na barbearia.</p>
 
           <div className="card" style={{ marginTop: 20, textAlign: 'left' }}>
-            <Resumo nome={nome} dataStr={dataStr} hora={hora} resumoServicos={calcularResumoServicos()} />
+            <Resumo nome={nome} dataStr={dataStr} hora={hora} resumoServicos={calcularResumoServicos()} formaPagamento={formaPagamento} />
           </div>
 
           {!lembreteAtivo ? (
@@ -371,13 +386,54 @@ function Etapa({ titulo, icone, children }) {
   );
 }
 
-function Resumo({ nome, dataStr, hora, resumoServicos }) {
+const FORMAS_PAGAMENTO = [
+  { valor: 'Dinheiro', icone: Banknote },
+  { valor: 'Crédito', icone: CreditCard },
+  { valor: 'Débito', icone: Wallet },
+  { valor: 'PIX', icone: QrCode },
+];
+
+function FormaPagamentoSelect({ selecionado, onSelect }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      {FORMAS_PAGAMENTO.map(({ valor, icone: Icone }) => {
+        const ativo = selecionado === valor;
+        return (
+          <button
+            key={valor}
+            type="button"
+            onClick={() => onSelect(valor)}
+            className="card"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              cursor: 'pointer',
+              padding: '12px 10px',
+              fontWeight: 600,
+              border: ativo ? '1px solid var(--gold)' : '1px solid var(--border)',
+              background: ativo ? 'rgba(201,162,39,0.08)' : 'var(--panel)',
+              color: ativo ? 'var(--gold)' : 'var(--text)',
+            }}
+          >
+            <Icone size={16} />
+            {valor}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Resumo({ nome, dataStr, hora, resumoServicos, formaPagamento }) {
   const d = dataStr ? new Date(`${dataStr}T00:00:00`) : null;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 14 }}>
       <Linha label="Nome" valor={nome} />
       <Linha label="Data" valor={d ? d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' }) : ''} />
       <Linha label="Horário" valor={hora} />
+      {formaPagamento && <Linha label="Pagamento" valor={formaPagamento} />}
       {resumoServicos && resumoServicos.itens.length > 0 && (
         <>
           <div style={{ borderTop: '1px solid var(--border)', margin: '4px 0' }} />
