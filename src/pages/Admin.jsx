@@ -23,6 +23,7 @@ import {
   ChevronRight,
   Clock,
   CreditCard,
+  Download,
   Lock,
   Pencil,
   Phone,
@@ -827,6 +828,10 @@ function FormaPagamentoIcone({ forma }) {
 
 // ---------- Clientes ----------
 
+function escaparVcard(texto) {
+  return String(texto).replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/;/g, '\\;');
+}
+
 function ClientesTab() {
   const [clientes, setClientes] = useState(null);
   const [busca, setBusca] = useState('');
@@ -868,9 +873,29 @@ function ClientesTab() {
     );
   }, [clientes, busca]);
 
+  function baixarVcf() {
+    const vistos = new Set();
+    const cartoes = [];
+    filtrados.forEach((c) => {
+      const digitos = c.telefone.replace(/\D/g, '');
+      if (!digitos || vistos.has(digitos)) return;
+      vistos.add(digitos);
+      const tel = digitos.length <= 11 ? `+55${digitos}` : `+${digitos}`;
+      const nome = escaparVcard(c.nome || c.telefone);
+      cartoes.push(`BEGIN:VCARD\nVERSION:3.0\nFN:${nome}\nTEL;TYPE=CELL:${tel}\nEND:VCARD`);
+    });
+    const blob = new Blob([cartoes.join('\n')], { type: 'text/vcard;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'clientes-sandro-barber.vcf';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div style={{ paddingTop: 8 }}>
-      <div style={{ position: 'relative', marginBottom: 14 }}>
+      <div style={{ position: 'relative', marginBottom: 10 }}>
         <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
         <input
           placeholder="Buscar por nome ou telefone"
@@ -879,6 +904,12 @@ function ClientesTab() {
           style={{ paddingLeft: 36 }}
         />
       </div>
+
+      {clientes !== null && clientes.length > 0 && (
+        <button type="button" className="btn btn-secondary btn-block" style={{ marginBottom: 14 }} onClick={baixarVcf}>
+          <Download size={16} /> Baixar contatos (.vcf){busca.trim() ? ` — ${filtrados.length} filtrado${filtrados.length !== 1 ? 's' : ''}` : ''}
+        </button>
+      )}
 
       {clientes === null ? (
         <p style={{ color: 'var(--text-dim)' }}>Carregando…</p>
