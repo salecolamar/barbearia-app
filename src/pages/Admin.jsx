@@ -14,6 +14,7 @@ import {
   where,
 } from 'firebase/firestore';
 import {
+  Banknote,
   BarChart3,
   Bell,
   Calendar,
@@ -21,9 +22,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  CreditCard,
   Lock,
   Pencil,
   Plus,
+  QrCode,
   Repeat,
   Scissors,
   Settings,
@@ -578,6 +581,19 @@ function FinanceiroTab() {
 
   const total = agendamentos.reduce((soma, a) => soma + (a.valorTotal || 0), 0);
 
+  const porFormaPagamento = useMemo(() => {
+    const ordem = ['Dinheiro', 'Crédito', 'Débito', 'PIX', 'Não informado'];
+    const mapa = new Map();
+    agendamentos.forEach((a) => {
+      const forma = a.formaPagamento || 'Não informado';
+      const atual = mapa.get(forma) || { valor: 0, qtd: 0 };
+      atual.valor += a.valorTotal || 0;
+      atual.qtd += 1;
+      mapa.set(forma, atual);
+    });
+    return [...mapa.entries()].sort((a, b) => ordem.indexOf(a[0]) - ordem.indexOf(b[0]));
+  }, [agendamentos]);
+
   const porData = useMemo(() => {
     const mapa = new Map();
     agendamentos.forEach((a) => mapa.set(a.data, (mapa.get(a.data) || 0) + (a.valorTotal || 0)));
@@ -668,6 +684,42 @@ function FinanceiroTab() {
         </p>
       </div>
 
+      {porFormaPagamento.length > 0 && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, color: 'var(--gold)', fontSize: 13, fontWeight: 700 }}>
+            <Wallet size={15} /> Por forma de pagamento
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {porFormaPagamento.map(([forma, { valor, qtd }]) => (
+              <div key={forma} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <FormaPagamentoIcone forma={forma} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{forma}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+                    {qtd} atendimento{qtd !== 1 ? 's' : ''}
+                  </div>
+                </div>
+                <div style={{ fontWeight: 700, color: 'var(--gold)', fontSize: 14, whiteSpace: 'nowrap' }}>
+                  R$ {valor.toFixed(2).replace('.', ',')}
+                </div>
+              </div>
+            ))}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginTop: 2,
+                paddingTop: 10,
+                borderTop: '1px solid var(--border)',
+              }}
+            >
+              <span style={{ fontWeight: 700 }}>Total</span>
+              <span style={{ fontWeight: 700, color: 'var(--gold)' }}>R$ {total.toFixed(2).replace('.', ',')}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {barras && (
         <div className="card" style={{ marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, color: 'var(--gold)', fontSize: 13, fontWeight: 700 }}>
@@ -731,13 +783,39 @@ function FinanceiroTab() {
                   <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>{a.servicos.map((s) => s.nome).join(', ')}</div>
                 )}
               </div>
-              <div style={{ fontWeight: 700, color: 'var(--gold)', fontSize: 14, whiteSpace: 'nowrap' }}>
-                R$ {(a.valorTotal || 0).toFixed(2).replace('.', ',')}
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontWeight: 700, color: 'var(--gold)', fontSize: 14, whiteSpace: 'nowrap' }}>
+                  R$ {(a.valorTotal || 0).toFixed(2).replace('.', ',')}
+                </div>
+                {a.formaPagamento && (
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{a.formaPagamento}</div>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function FormaPagamentoIcone({ forma }) {
+  const Icone = { Dinheiro: Banknote, Crédito: CreditCard, Débito: Wallet, PIX: QrCode }[forma] || Wallet;
+  return (
+    <div
+      style={{
+        width: 32,
+        height: 32,
+        borderRadius: '50%',
+        background: 'var(--panel-2)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        color: 'var(--gold)',
+      }}
+    >
+      <Icone size={16} />
     </div>
   );
 }
