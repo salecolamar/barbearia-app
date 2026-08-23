@@ -60,9 +60,6 @@ export default function Home({ irParaAgendar, podeInstalarAndroid, onInstalarAnd
     );
   }
 
-  const enderecoUrl = config.endereco
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(config.endereco)}`
-    : null;
   const whatsappUrl = config.whatsapp ? `https://wa.me/${config.whatsapp.replace(/\D/g, '')}` : null;
 
   return (
@@ -117,17 +114,10 @@ export default function Home({ irParaAgendar, podeInstalarAndroid, onInstalarAnd
       )}
 
       {config.endereco && (
-        <a
-          href={enderecoUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="card home-card"
-          style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-        >
+        <div className="card home-card">
           <SecaoTitulo icone={<MapPin size={16} />} texto="Endereço" />
           <p style={{ fontSize: 14, color: 'var(--text-dim)' }}>{config.endereco}</p>
-          <p style={{ fontSize: 13, color: 'var(--gold)', marginTop: 5 }}>Abrir no mapa →</p>
-        </a>
+        </div>
       )}
 
       {(config.whatsapp || config.instagram) && (
