@@ -66,7 +66,7 @@ export default function Home({ irParaAgendar, podeInstalarAndroid, onInstalarAnd
   const whatsappUrl = config.whatsapp ? `https://wa.me/${config.whatsapp.replace(/\D/g, '')}` : null;
 
   return (
-    <div className="home-stack" style={{ paddingTop: 6, display: 'flex', flexDirection: 'column' }}>
+    <div className="home-stack" style={{ paddingTop: 6, display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
       <div className="card home-hero" style={{ textAlign: 'center' }}>
         <img
           src={logo}

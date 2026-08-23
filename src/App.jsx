@@ -53,7 +53,7 @@ export default function App() {
         <h1 style={{ fontSize: 20 }}>Sistema de Agendamento</h1>
       </header>
 
-      <main style={{ flex: 1, padding: '0 16px 90px' }}>
+      <main style={{ flex: 1, padding: '0 16px 90px', display: 'flex', flexDirection: 'column' }}>
         {aba === 'inicio' && (
           <HomePage
             irParaAgendar={() => setAba('agendar')}
