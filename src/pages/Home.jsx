@@ -77,7 +77,18 @@ export default function Home({ irParaAgendar, podeInstalarAndroid, onInstalarAnd
         />
         <h1 style={{ fontSize: 21 }}>{config.nomeBarbearia}</h1>
         {config.descricao && (
-          <p style={{ color: 'var(--text-dim)', fontSize: 14, marginTop: 6 }}>{config.descricao}</p>
+          <p
+            style={{
+              color: 'var(--text-dim)',
+              fontSize: 11,
+              marginTop: 6,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {config.descricao}
+          </p>
         )}
       </div>
 
@@ -99,7 +110,7 @@ export default function Home({ irParaAgendar, podeInstalarAndroid, onInstalarAnd
       )}
 
       {config.horarios && (
-        <div className="card home-card">
+        <div className="home-card">
           <SecaoTitulo icone={<Clock size={16} />} texto="Horário de funcionamento" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {formatarHorarios(config.horarios).map((linha) => (
@@ -116,7 +127,7 @@ export default function Home({ irParaAgendar, podeInstalarAndroid, onInstalarAnd
           href={enderecoUrl}
           target="_blank"
           rel="noreferrer"
-          className="card home-card"
+          className="home-card"
           style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
         >
           <SecaoTitulo icone={<MapPin size={16} />} texto="Endereço" />
