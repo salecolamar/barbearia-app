@@ -3,8 +3,7 @@ import { collection, doc, getDocs, query, updateDoc, where } from 'firebase/fire
 import { CalendarX2, Pencil, Search, X } from 'lucide-react';
 import { db } from '../firebase';
 import { getClienteSalvo, salvarCliente } from '../utils/storage';
-import { dateToStr, strToDate } from '../utils/slots';
-import { calcularMelhorPreco } from '../utils/combos';
+import { dateToStr, escolherBarbeiroDisponivel, strToDate } from '../utils/slots';
 import ServiceSelect from '../components/ServiceSelect';
 
 export default function MyAppointments() {
@@ -15,9 +14,11 @@ export default function MyAppointments() {
   const [agendamentos, setAgendamentos] = useState([]);
   const [cancelando, setCancelando] = useState(null);
   const [servicos, setServicos] = useState([]);
+  const [barbeiros, setBarbeiros] = useState([]);
   const [editandoId, setEditandoId] = useState(null);
   const [selecionadosIds, setSelecionadosIds] = useState([]);
   const [salvandoServicos, setSalvandoServicos] = useState(false);
+  const [erroServicos, setErroServicos] = useState('');
 
   async function buscar(e) {
     e?.preventDefault();
@@ -38,6 +39,9 @@ export default function MyAppointments() {
     getDocs(collection(db, 'servicos')).then((snap) => {
       setServicos(snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((s) => s.ativo !== false));
     });
+    getDocs(collection(db, 'barbeiros')).then((snap) => {
+      setBarbeiros(snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((b) => b.ativo !== false));
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -51,11 +55,13 @@ export default function MyAppointments() {
   function abrirEdicao(a) {
     setEditandoId(a.id);
     setSelecionadosIds((a.servicos || []).map((s) => s.id));
+    setErroServicos('');
   }
 
   function fecharEdicao() {
     setEditandoId(null);
     setSelecionadosIds([]);
+    setErroServicos('');
   }
 
   function alternarServico(servico) {
@@ -64,14 +70,26 @@ export default function MyAppointments() {
 
   async function salvarServicos(a) {
     setSalvandoServicos(true);
+    setErroServicos('');
     const escolhidos = servicos.filter((s) => selecionadosIds.includes(s.id));
-    const resumo = escolhidos.length
-      ? calcularMelhorPreco(escolhidos.map((s) => ({ chave: s.chave || s.id, nome: s.nome, preco: s.preco })), strToDate(a.data).getDay())
-      : { total: 0, itens: [] };
+    const duracaoTotal = escolhidos.reduce((acc, s) => acc + (s.duracaoMin || 0), 0);
+
+    const snap = await getDocs(query(collection(db, 'agendamentos'), where('data', '==', a.data)));
+    const agendamentosDoDia = snap.docs.filter((d) => d.id !== a.id).map((d) => d.data());
+    const barbeiro = escolherBarbeiroDisponivel({ hora: a.hora, duracaoMin: duracaoTotal, barbeiros, agendamentosDoDia });
+    if (!barbeiro) {
+      setErroServicos('Esse serviço não cabe mais nesse horário. Escolha outros serviços ou cancele e marque outro horário.');
+      setSalvandoServicos(false);
+      return;
+    }
+
     const dados = {
       servicos: escolhidos.map((s) => ({ id: s.id, nome: s.nome })),
-      valorItens: resumo.itens,
-      valorTotal: resumo.total,
+      valorItens: escolhidos.map((s) => ({ nome: s.nome, preco: s.preco })),
+      valorTotal: escolhidos.reduce((acc, s) => acc + (s.preco || 0), 0),
+      servicoDuracao: duracaoTotal,
+      barbeiroId: barbeiro.id,
+      barbeiroNome: barbeiro.nome,
     };
     await updateDoc(doc(db, 'agendamentos', a.id), dados);
     setAgendamentos((prev) => prev.map((item) => (item.id === a.id ? { ...item, ...dados } : item)));
@@ -161,6 +179,7 @@ export default function MyAppointments() {
                     onToggle={alternarServico}
                     diaSemana={strToDate(a.data).getDay()}
                   />
+                  {erroServicos && <p style={{ color: 'var(--danger)', fontSize: 13, marginTop: 8 }}>{erroServicos}</p>}
                   <button
                     type="button"
                     className="btn btn-primary btn-block"

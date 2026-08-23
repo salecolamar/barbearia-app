@@ -5,7 +5,6 @@ import { db } from '../firebase';
 import { pedirTokenNotificacao } from '../notifications';
 import { getClienteSalvo, salvarCliente } from '../utils/storage';
 import { dateToStr, escolherBarbeiroDisponivel, getHorariosComStatus, proximosDias, strToDate } from '../utils/slots';
-import { calcularMelhorPreco } from '../utils/combos';
 import DayStrip from '../components/DayStrip';
 import TimeSlotGrid from '../components/TimeSlotGrid';
 import ServiceSelect from '../components/ServiceSelect';
@@ -117,11 +116,36 @@ export default function Booking({ forcarCadastro = false }) {
 
   function calcularResumoServicos() {
     const escolhidos = servicos.filter((s) => servicosSelecionadosIds.includes(s.id));
-    if (escolhidos.length === 0) return { total: 0, itens: [] };
-    return calcularMelhorPreco(
-      escolhidos.map((s) => ({ chave: s.chave || s.id, nome: s.nome, preco: s.preco })),
-      strToDate(dataStr).getDay()
-    );
+    if (escolhidos.length === 0) return { total: 0, duracaoTotal: 0, itens: [] };
+    return {
+      total: escolhidos.reduce((acc, s) => acc + (s.preco || 0), 0),
+      duracaoTotal: escolhidos.reduce((acc, s) => acc + (s.duracaoMin || 0), 0),
+      itens: escolhidos.map((s) => ({ nome: s.nome, preco: s.preco })),
+    };
+  }
+
+  async function confirmarServicos() {
+    const resumoServicos = calcularResumoServicos();
+    const duracaoTotal = resumoServicos.duracaoTotal || config.intervaloMin || 30;
+    setCarregandoHorarios(true);
+    setErro('');
+    const snap = await getDocs(query(collection(db, 'agendamentos'), where('data', '==', dataStr)));
+    const agendamentosDoDia = snap.docs.map((d) => d.data());
+    const barbeiro = escolherBarbeiroDisponivel({
+      hora,
+      duracaoMin: duracaoTotal,
+      barbeiros,
+      agendamentosDoDia,
+    });
+    setCarregandoHorarios(false);
+    if (!barbeiro) {
+      setErro('Esse serviço não cabe mais nesse horário. Escolha outro horário.');
+      await buscarHorarios(dataStr);
+      setPasso('horario');
+      return;
+    }
+    setBarbeiroEscolhido(barbeiro);
+    setPasso('revisao');
   }
 
   async function confirmarAgendamento() {
@@ -132,7 +156,7 @@ export default function Booking({ forcarCadastro = false }) {
       const docRef = await addDoc(collection(db, 'agendamentos'), {
         barbeiroId: barbeiroEscolhido.id,
         barbeiroNome: barbeiroEscolhido.nome,
-        servicoDuracao: config.intervaloMin || 30,
+        servicoDuracao: resumoServicos.duracaoTotal || config.intervaloMin || 30,
         servicos: servicos.filter((s) => servicosSelecionadosIds.includes(s.id)).map((s) => ({ id: s.id, nome: s.nome })),
         valorItens: resumoServicos.itens,
         valorTotal: resumoServicos.total,
@@ -260,14 +284,15 @@ export default function Booking({ forcarCadastro = false }) {
                 onToggle={alternarServico}
                 diaSemana={strToDate(dataStr).getDay()}
               />
+              {erro && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{erro}</p>}
               <button
                 type="button"
                 className="btn btn-primary btn-block"
                 style={{ marginTop: 4 }}
-                disabled={servicosSelecionadosIds.length === 0}
-                onClick={() => setPasso('revisao')}
+                disabled={servicosSelecionadosIds.length === 0 || carregandoHorarios}
+                onClick={confirmarServicos}
               >
-                Continuar
+                {carregandoHorarios ? 'Verificando…' : 'Continuar'}
               </button>
             </>
           )}
