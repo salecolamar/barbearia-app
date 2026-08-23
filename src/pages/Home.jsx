@@ -110,15 +110,9 @@ export default function Home({ irParaAgendar, podeInstalarAndroid, onInstalarAnd
       )}
 
       {config.horarios && (
-        <div className="home-card">
+        <div className="card home-card">
           <SecaoTitulo icone={<Clock size={16} />} texto="Horário de funcionamento" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {formatarHorarios(config.horarios).map((linha) => (
-              <p key={linha} style={{ fontSize: 14, color: 'var(--text-dim)' }}>
-                {linha}
-              </p>
-            ))}
-          </div>
+          <p style={{ fontSize: 14, color: 'var(--text-dim)' }}>{formatarHorarios(config.horarios).join(' · ')}</p>
         </div>
       )}
 
@@ -127,7 +121,7 @@ export default function Home({ irParaAgendar, podeInstalarAndroid, onInstalarAnd
           href={enderecoUrl}
           target="_blank"
           rel="noreferrer"
-          className="home-card"
+          className="card home-card"
           style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
         >
           <SecaoTitulo icone={<MapPin size={16} />} texto="Endereço" />
