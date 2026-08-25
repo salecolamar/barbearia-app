@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { Banknote, Bell, Check, ChevronLeft, Clock, CreditCard, QrCode, Scissors, User, Wallet } from 'lucide-react';
 import { db } from '../firebase';
 import { pedirTokenNotificacao } from '../notifications';
@@ -21,6 +21,7 @@ export default function Booking({ forcarCadastro = false }) {
 
   const [nome, setNome] = useState(clienteSalvo?.nome || '');
   const [telefone, setTelefone] = useState(clienteSalvo?.telefone || '');
+  const [aniversario, setAniversario] = useState('');
 
   const dias = useMemo(() => proximosDias(21), []);
   const [dataStr, setDataStr] = useState(dateToStr(new Date()));
@@ -80,10 +81,20 @@ export default function Booking({ forcarCadastro = false }) {
     setCarregandoHorarios(false);
   }
 
-  function confirmarCadastro(e) {
+  async function confirmarCadastro(e) {
     e.preventDefault();
     if (!nome.trim() || !telefone.trim()) return;
     salvarCliente({ nome: nome.trim(), telefone: telefone.trim() });
+    setDoc(
+      doc(db, 'clientes', telefone.trim()),
+      {
+        nome: nome.trim(),
+        telefone: telefone.trim(),
+        ...(aniversario ? { aniversario } : {}),
+        atualizadoEm: serverTimestamp(),
+      },
+      { merge: true }
+    ).catch((err) => console.error('Falha ao salvar dados do cliente:', err));
     setPasso('horario');
   }
 
@@ -257,6 +268,12 @@ export default function Booking({ forcarCadastro = false }) {
               inputMode="tel"
               required
             />
+            <div>
+              <label style={{ fontSize: 12, color: 'var(--text-dim)', display: 'block', marginBottom: 4 }}>
+                Aniversário (opcional)
+              </label>
+              <input type="date" value={aniversario} onChange={(e) => setAniversario(e.target.value)} />
+            </div>
             <button type="submit" className="btn btn-primary btn-block">
               Continuar
             </button>

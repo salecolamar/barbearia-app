@@ -114,10 +114,14 @@ Para isso funcionar de verdade (mesmo com o app fechado), é preciso:
    - URL: `https://SEU-LINK.vercel.app/api/send-reminders?secret=SEU_REMINDER_SECRET`
    - Intervalo: a cada 10 minutos (pra pegar o aviso perto dos 30 min antes, sem atraso grande).
    - Salvar e ativar.
+7. (Opcional) Para o barbeiro ser avisado quando o aniversário de um cliente estiver chegando, crie **outro** cronjob no mesmo site:
+   - URL: `https://SEU-LINK.vercel.app/api/send-birthday-alerts?secret=SEU_REMINDER_SECRET`
+   - Intervalo: 1 vez por dia (ex: todo dia às 08:00).
+   - Salvar e ativar.
 
-O aviso ao barbeiro (passo 4 do fluxo) já funciona assim que os passos 1-5 acima estiverem prontos — não depende do cron-job.org, só o lembrete do cliente (~30 min antes) depende dele.
+O aviso ao barbeiro (passo 4 do fluxo) já funciona assim que os passos 1-5 acima estiverem prontos — não depende do cron-job.org, só o lembrete do cliente (~30 min antes) e o aviso de aniversário dependem dele.
 
-> Sem esse passo, o app funciona normalmente — só as notificações ficam desativadas.
+> Sem esse passo, o app funciona normalmente — só as notificações ficam desativadas. Dentro do painel `/admin`, a aba **Clientes** já mostra um aviso visual de "Aniversários chegando" mesmo sem configurar o cron.
 
 ---
 

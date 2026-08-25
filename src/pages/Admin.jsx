@@ -17,6 +17,7 @@ import {
   Banknote,
   BarChart3,
   Bell,
+  Cake,
   Calendar,
   CalendarPlus,
   ChevronLeft,
@@ -45,7 +46,17 @@ import {
 } from 'lucide-react';
 import { db } from '../firebase';
 import { pedirTokenNotificacao } from '../notifications';
-import { DIAS_SEMANA, DIAS_SEMANA_ABREV, dateToStr, fimMes, fimSemana, inicioMes, inicioSemana } from '../utils/slots';
+import {
+  DIAS_SEMANA,
+  DIAS_SEMANA_ABREV,
+  dateToStr,
+  fimMes,
+  fimSemana,
+  inicioMes,
+  inicioSemana,
+  minutesToTime,
+  timeToMinutes,
+} from '../utils/slots';
 
 const SESSION_KEY = 'barbearia:admin-ok';
 const NOTIF_KEY = 'barbearia:admin-notif-ok';
@@ -300,8 +311,10 @@ function AgendaTab() {
   const [historico, setHistorico] = useState(null);
   const [barbeiros, setBarbeiros] = useState([]);
   const [bloqueando, setBloqueando] = useState(false);
-  const [horaBloqueio, setHoraBloqueio] = useState('12:00');
+  const [inicioBloqueio, setInicioBloqueio] = useState('12:00');
+  const [fimBloqueio, setFimBloqueio] = useState('13:00');
   const [motivoBloqueio, setMotivoBloqueio] = useState('');
+  const [erroBloqueio, setErroBloqueio] = useState('');
   const [barbeiroBloqueioId, setBarbeiroBloqueioId] = useState('');
   const [salvandoBloqueio, setSalvandoBloqueio] = useState(false);
   const dataStr = dateToStr(data);
@@ -357,17 +370,23 @@ function AgendaTab() {
   async function criarBloqueio(e) {
     e.preventDefault();
     const barbeiro = barbeiros.find((b) => b.id === barbeiroBloqueioId);
-    if (!barbeiro || !horaBloqueio) return;
+    if (!barbeiro || !inicioBloqueio || !fimBloqueio) return;
+    const duracaoMin = timeToMinutes(fimBloqueio) - timeToMinutes(inicioBloqueio);
+    if (duracaoMin <= 0) {
+      setErroBloqueio('O fim precisa ser depois do início.');
+      return;
+    }
+    setErroBloqueio('');
     setSalvandoBloqueio(true);
     await addDoc(collection(db, 'agendamentos'), {
       tipo: 'bloqueio',
       barbeiroId: barbeiro.id,
       barbeiroNome: barbeiro.nome,
-      servicoDuracao: 30,
+      servicoDuracao: duracaoMin,
       servicos: [],
       valorTotal: 0,
       data: dataStr,
-      hora: horaBloqueio,
+      hora: inicioBloqueio,
       clienteNome: motivoBloqueio.trim() || 'Bloqueado',
       clienteTelefone: '',
       status: 'confirmado',
@@ -394,7 +413,15 @@ function AgendaTab() {
       </div>
 
       {!bloqueando ? (
-        <button type="button" className="btn btn-secondary btn-block" style={{ marginBottom: 14 }} onClick={() => setBloqueando(true)}>
+        <button
+          type="button"
+          className="btn btn-secondary btn-block"
+          style={{ marginBottom: 14 }}
+          onClick={() => {
+            setErroBloqueio('');
+            setBloqueando(true);
+          }}
+        >
           <Lock size={14} /> Bloquear horário
         </button>
       ) : (
@@ -408,7 +435,17 @@ function AgendaTab() {
               ))}
             </select>
           )}
-          <input type="time" step="1800" value={horaBloqueio} onChange={(e) => setHoraBloqueio(e.target.value)} required />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, color: 'var(--text-dim)', display: 'block', marginBottom: 4 }}>Início</label>
+              <input type="time" step="900" value={inicioBloqueio} onChange={(e) => setInicioBloqueio(e.target.value)} required />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, color: 'var(--text-dim)', display: 'block', marginBottom: 4 }}>Fim</label>
+              <input type="time" step="900" value={fimBloqueio} onChange={(e) => setFimBloqueio(e.target.value)} required />
+            </div>
+          </div>
+          {erroBloqueio && <p style={{ color: 'var(--danger)', fontSize: 13, margin: 0 }}>{erroBloqueio}</p>}
           <input
             placeholder="Motivo (opcional, ex: Almoço)"
             value={motivoBloqueio}
@@ -437,7 +474,7 @@ function AgendaTab() {
                 <div>
                   <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Lock size={13} color="var(--text-dim)" />
-                    {a.hora} · {a.clienteNome}
+                    {a.hora}–{minutesToTime(timeToMinutes(a.hora) + (a.servicoDuracao || 30))} · {a.clienteNome}
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>{a.barbeiroNome}</div>
                 </div>
@@ -832,14 +869,41 @@ function escaparVcard(texto) {
   return String(texto).replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/;/g, '\\;');
 }
 
+// Dias até a próxima ocorrência do aniversário (YYYY-MM-DD), considerando
+// o ano atual ou o próximo se a data desse ano já passou.
+function diasParaAniversario(aniversario) {
+  if (!aniversario) return null;
+  const [, mes, dia] = aniversario.split('-').map(Number);
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  let proxima = new Date(hoje.getFullYear(), mes - 1, dia);
+  if (proxima < hoje) proxima = new Date(hoje.getFullYear() + 1, mes - 1, dia);
+  return Math.round((proxima - hoje) / 86400000);
+}
+
+function formatarAniversario(aniversario) {
+  const [, mes, dia] = aniversario.split('-').map(Number);
+  return new Date(2000, mes - 1, dia).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+}
+
 function ClientesTab() {
   const [clientes, setClientes] = useState(null);
   const [busca, setBusca] = useState('');
+  const [editandoAniversarioTel, setEditandoAniversarioTel] = useState(null);
+  const [aniversarioEdit, setAniversarioEdit] = useState('');
+  const [salvandoAniversario, setSalvandoAniversario] = useState(false);
 
   useEffect(() => {
-    getDocs(collection(db, 'agendamentos')).then((snap) => {
+    recarregar();
+  }, []);
+
+  function recarregar() {
+    Promise.all([getDocs(collection(db, 'agendamentos')), getDocs(collection(db, 'clientes'))]).then(([agSnap, clSnap]) => {
+      const clientesCadastro = new Map();
+      clSnap.docs.forEach((d) => clientesCadastro.set(d.id, d.data()));
+
       const mapa = new Map();
-      snap.docs
+      agSnap.docs
         .map((d) => d.data())
         .filter((a) => a.tipo !== 'bloqueio' && a.clienteTelefone)
         .sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora))
@@ -859,10 +923,39 @@ function ClientesTab() {
           if (a.data > atual.ultima) atual.ultima = a.data;
           mapa.set(a.clienteTelefone, atual);
         });
+      // Garante que clientes que só fizeram cadastro apareçam mesmo sem agendamento ainda.
+      clientesCadastro.forEach((c, telefone) => {
+        if (!mapa.has(telefone)) {
+          mapa.set(telefone, { nome: c.nome || null, telefone, visitas: 0, gasto: 0, primeira: null, ultima: '0000-00-00' });
+        }
+      });
+      mapa.forEach((atual, telefone) => {
+        atual.nome = atual.nome || clientesCadastro.get(telefone)?.nome || null;
+        atual.aniversario = clientesCadastro.get(telefone)?.aniversario || null;
+      });
       const lista = [...mapa.values()].sort((a, b) => b.ultima.localeCompare(a.ultima));
       setClientes(lista);
     });
-  }, []);
+  }
+
+  const aniversariantesProximos = useMemo(() => {
+    if (!clientes) return [];
+    return clientes
+      .filter((c) => c.aniversario)
+      .map((c) => ({ ...c, dias: diasParaAniversario(c.aniversario) }))
+      .filter((c) => c.dias <= 7)
+      .sort((a, b) => a.dias - b.dias);
+  }, [clientes]);
+
+  async function salvarAniversario(telefone) {
+    if (!aniversarioEdit) return;
+    setSalvandoAniversario(true);
+    await setDoc(doc(db, 'clientes', telefone), { aniversario: aniversarioEdit }, { merge: true });
+    setSalvandoAniversario(false);
+    setEditandoAniversarioTel(null);
+    setAniversarioEdit('');
+    recarregar();
+  }
 
   const filtrados = useMemo(() => {
     if (!clientes) return [];
@@ -911,6 +1004,27 @@ function ClientesTab() {
         </button>
       )}
 
+      {aniversariantesProximos.length > 0 && (
+        <div
+          className="card"
+          style={{ marginBottom: 14, background: 'rgba(201,162,39,0.08)', border: '1px solid var(--gold)' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: 'var(--gold)', fontSize: 13, fontWeight: 700 }}>
+            <Cake size={15} /> Aniversários chegando
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {aniversariantesProximos.map((c) => (
+              <div key={c.telefone} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span>{c.nome || c.telefone}</span>
+                <span style={{ color: 'var(--text-dim)' }}>
+                  {c.dias === 0 ? 'Hoje!' : c.dias === 1 ? 'Amanhã' : `Em ${c.dias} dias`} · {formatarAniversario(c.aniversario)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {clientes === null ? (
         <p style={{ color: 'var(--text-dim)' }}>Carregando…</p>
       ) : filtrados.length === 0 ? (
@@ -924,43 +1038,112 @@ function ClientesTab() {
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {filtrados.map((c) => (
-              <div key={c.telefone} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: '50%',
-                    background: 'var(--panel-2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    color: 'var(--gold)',
-                    fontWeight: 700,
-                  }}
-                >
-                  {(c.nome || '?').charAt(0).toUpperCase()}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700 }}>{c.nome || 'Sem nome'}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>{c.telefone}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--gold)', marginTop: 4 }}>
-                    {c.visitas <= 1 ? <Sparkles size={12} /> : <Repeat size={12} />}
-                    {c.visitas <= 1
-                      ? 'Cliente novo'
-                      : `${c.visitas} visitas · cliente desde ${new Date(`${c.primeira}T00:00:00`).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}`}
+              <div key={c.telefone} className="card">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: '50%',
+                      background: 'var(--panel-2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      color: 'var(--gold)',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {(c.nome || '?').charAt(0).toUpperCase()}
                   </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700 }}>{c.nome || 'Sem nome'}</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>{c.telefone}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--gold)', marginTop: 4 }}>
+                      {c.visitas <= 1 ? <Sparkles size={12} /> : <Repeat size={12} />}
+                      {c.visitas <= 1
+                        ? 'Cliente novo'
+                        : `${c.visitas} visitas · cliente desde ${new Date(`${c.primeira}T00:00:00`).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}`}
+                    </div>
+                  </div>
+                  <a
+                    href={`https://wa.me/${c.telefone.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-secondary"
+                    style={{ padding: 10, flexShrink: 0 }}
+                    title="Abrir WhatsApp"
+                  >
+                    <Phone size={16} />
+                  </a>
                 </div>
-                <a
-                  href={`https://wa.me/${c.telefone.replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn btn-secondary"
-                  style={{ padding: 10, flexShrink: 0 }}
-                  title="Abrir WhatsApp"
-                >
-                  <Phone size={16} />
-                </a>
+
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                  {editandoAniversarioTel === c.telefone ? (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <input
+                        type="date"
+                        value={aniversarioEdit}
+                        onChange={(e) => setAniversarioEdit(e.target.value)}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        style={{ padding: '8px 12px', fontSize: 12 }}
+                        disabled={salvandoAniversario || !aniversarioEdit}
+                        onClick={() => salvarAniversario(c.telefone)}
+                      >
+                        {salvandoAniversario ? 'Salvando…' : 'Salvar'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ padding: '8px 12px', fontSize: 12 }}
+                        onClick={() => setEditandoAniversarioTel(null)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : c.aniversario ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-dim)' }}>
+                        <Cake size={12} /> {formatarAniversario(c.aniversario)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditandoAniversarioTel(c.telefone);
+                          setAniversarioEdit(c.aniversario);
+                        }}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: 2 }}
+                      >
+                        <Pencil size={13} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditandoAniversarioTel(c.telefone);
+                        setAniversarioEdit('');
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: 12,
+                        color: 'var(--text-dim)',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                      }}
+                    >
+                      <Cake size={12} /> Adicionar aniversário
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
