@@ -25,3 +25,6 @@ dist-ssr
 
 .vercel
 .env*
+
+# Gerado por scripts/generate-sw.mjs a cada build
+public/sw.js
